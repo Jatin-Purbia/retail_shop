@@ -1,0 +1,188 @@
+import React, { useState } from 'react';
+
+// Import the same inventory from AdminPage
+const inventory = [
+  { id: 1, name: 'Chini', hindiName: 'चीनी', price: 50, unit: 'किग्रा', stock: 100 },
+  { id: 2, name: 'Boora', hindiName: 'बूरा', price: 50, unit: 'किग्रा', stock: 100 },
+  { id: 3, name: 'Besan Motia', hindiName: 'बेसन मोटिया', price: 50, unit: 'किग्रा', stock: 100 },
+  { id: 4, name: 'Aata Barik', hindiName: 'आटा बारीक', price: 50, unit: 'किग्रा', stock: 100 },
+  { id: 5, name: 'Maida', hindiName: 'मैदा', price: 50, unit: 'किग्रा', stock: 100 },
+  { id: 6, name: 'Suji', hindiName: 'सूजी', price: 50, unit: 'किग्रा', stock: 100 },
+  { id: 7, name: 'Ghee Desi', hindiName: 'घी देसी', price: 50, unit: 'पीपा', stock: 100 },
+  { id: 8, name: 'Tel Moongfali', hindiName: 'तेल मूंगफली', price: 50, unit: 'पीपा', stock: 100 },
+  { id: 9, name: 'Tel', hindiName: 'तेल', price: 50, unit: 'पीपा', stock: 100 },
+  { id: 10, name: 'Kaju', hindiName: 'काजू', price: 50, unit: 'किग्रा', stock: 100 },
+  { id: 11, name: 'Badam', hindiName: 'बादाम', price: 50, unit: 'किग्रा', stock: 100 },
+  { id: 12, name: 'Pista Saabut', hindiName: 'पिस्ता साबुत', price: 50, unit: 'किग्रा', stock: 100 },
+  { id: 13, name: '4 Piece Kaju', hindiName: '4 पीस काजू', price: 50, unit: 'किग्रा', stock: 100 },
+  { id: 14, name: 'Kishmish', hindiName: 'किशमिश', price: 50, unit: 'ग्राम', stock: 100 },
+  { id: 15, name: 'Cutting Badam', hindiName: 'कटिंग बादाम', price: 50, unit: 'ग्राम', stock: 100 },
+  { id: 16, name: 'Cutting Pista', hindiName: 'कटिंग पिस्ता', price: 50, unit: 'ग्राम', stock: 100 },
+  { id: 17, name: 'Elaichi', hindiName: 'इलायची', price: 50, unit: 'ग्राम', stock: 100 },
+  { id: 18, name: 'Kesar', hindiName: 'केसर', price: 50, unit: 'ग्राम', stock: 100 },
+  { id: 19, name: 'Peela Color', hindiName: 'पीला कलर', price: 50, unit: 'ग्राम', stock: 100 },
+  { id: 20, name: 'Orange Color', hindiName: 'ऑरेंज कलर', price: 50, unit: 'ग्राम', stock: 100 },
+  { id: 21, name: 'Hara Color', hindiName: 'हरा कलर', price: 50, unit: 'ग्राम', stock: 100 },
+  { id: 22, name: 'Coffee Color', hindiName: 'कॉफी कलर', price: 50, unit: 'ग्राम', stock: 100 },
+  { id: 23, name: 'Chandi Vark', hindiName: 'चांदी वर्क', price: 50, unit: 'गड्डी', stock: 100 },
+  { id: 24, name: 'Heeng', hindiName: 'हींग', price: 50, unit: 'ग्राम', stock: 100 },
+  { id: 25, name: 'Cutter', hindiName: 'कटर', price: 50, unit: '1', stock: 100 },
+  { id: 26, name: 'Butter Paper', hindiName: 'बटर पेपर', price: 50, unit: '1', stock: 100 },
+  { id: 27, name: 'Phool Makhana', hindiName: 'फूल मखाना', price: 50, unit: 'ग्राम', stock: 100 },
+  { id: 28, name: 'Wafers', hindiName: 'वेफर्स', price: 50, unit: 'किग्रा', stock: 100 },
+  { id: 29, name: 'Double Chawal', hindiName: 'डबल चावल', price: 50, unit: 'किग्रा', stock: 100 },
+  { id: 30, name: 'Ararot', hindiName: 'अरारोट', price: 50, unit: 'किग्रा', stock: 100 },
+  { id: 31, name: 'Moth', hindiName: 'मोट', price: 50, unit: 'ग्राम', stock: 100 },
+  { id: 32, name: 'Meetha Soda', hindiName: 'मीठा सोडा', price: 50, unit: 'ग्राम', stock: 100 },
+  { id: 33, name: 'Kala Chana', hindiName: 'काला चना', price: 50, unit: 'ग्राम', stock: 100 },
+  { id: 34, name: 'Moongfali Dana', hindiName: 'मूंगफली दाना', price: 50, unit: 'किग्रा', stock: 100 },
+  { id: 35, name: 'Sooji Saabut', hindiName: 'सूजी साबुत', price: 50, unit: 'ग्राम', stock: 100 },
+  { id: 36, name: 'Poha', hindiName: 'पोहा', price: 50, unit: 'किग्रा', stock: 100 },
+  { id: 37, name: 'Chhola', hindiName: 'छोला', price: 50, unit: 'किग्रा', stock: 100 },
+  { id: 38, name: 'Moong Mogar', hindiName: 'मूंग मोगर', price: 50, unit: 'किग्रा', stock: 100 },
+  { id: 39, name: 'Udad Mogar', hindiName: 'उड़द मोगर', price: 50, unit: 'किग्रा', stock: 100 },
+  { id: 40, name: 'Chana Dal', hindiName: 'चना दाल', price: 50, unit: 'किग्रा', stock: 100 },
+  { id: 41, name: 'Arhar Dal', hindiName: 'अरहर दाल', price: 50, unit: 'किग्रा', stock: 100 },
+  { id: 42, name: 'Papad', hindiName: 'पापड़', price: 50, unit: 'नग', stock: 100 },
+  { id: 43, name: 'Cutting Papad', hindiName: 'कटिंग पापड़', price: 50, unit: 'ग्राम', stock: 100 },
+  { id: 44, name: '0 No. Sev', hindiName: '0 नं. सेव', price: 50, unit: 'ग्राम', stock: 100 },
+  { id: 45, name: 'Bikaneri Sev', hindiName: 'बीकानेरी सेव', price: 50, unit: 'किग्रा', stock: 100 },
+  { id: 46, name: 'Noodles', hindiName: 'नूडल्स', price: 50, unit: 'पैकेट', stock: 100 },
+  { id: 47, name: 'Pasta 2 Prakar', hindiName: 'पास्ता 2 प्रकार', price: 50, unit: 'किग्रा', stock: 100 },
+  { id: 48, name: 'Tomato Puree', hindiName: 'टमाटर प्यूरी', price: 50, unit: '3', stock: 100 },
+  { id: 49, name: 'Tomato Sauce', hindiName: 'टमाटर सॉस', price: 50, unit: '16', stock: 100 },
+  { id: 50, name: 'Sirka', hindiName: 'सिरका', price: 50, unit: '1', stock: 100 },
+  { id: 51, name: 'Red Chilli', hindiName: 'रेड चिली', price: 50, unit: '5', stock: 100 },
+  { id: 52, name: 'Coffee', hindiName: 'कॉफी', price: 50, unit: 'ग्राम', stock: 100 },
+];
+
+function CustomerPage() {
+  const [searchTerm, setSearchTerm] = useState('');
+  const [quantity, setQuantity] = useState(1);
+  const [selectedUnit, setSelectedUnit] = useState('kg');
+  const [cart, setCart] = useState([]);
+  const [filteredItems, setFilteredItems] = useState([]);
+
+  const handleSearch = (e) => {
+    const value = e.target.value;
+    setSearchTerm(value);
+    
+    const filtered = inventory.filter(item => 
+      item.name.toLowerCase().includes(value.toLowerCase()) ||
+      item.hindiName.includes(value)
+    );
+    setFilteredItems(filtered);
+  };
+
+  const handleAddToCart = (item) => {
+    const cartItem = {
+      ...item,
+      quantity,
+      unit: selectedUnit,
+      total: item.price * quantity
+    };
+    setCart([...cart, cartItem]);
+    setSearchTerm('');
+    setQuantity(1);
+  };
+
+  const calculateTotal = () => {
+    return cart.reduce((sum, item) => sum + item.total, 0);
+  };
+
+  return (
+    <div className="max-w-4xl mx-auto">
+      <div className="bg-white shadow rounded-lg p-6 mb-6">
+        <h1 className="text-2xl font-bold mb-6">Customer Billing</h1>
+        
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Search Item</label>
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={handleSearch}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Search items..."
+            />
+            {searchTerm && filteredItems.length > 0 && (
+              <div className="mt-2 border rounded-md shadow-sm">
+                {filteredItems.map(item => (
+                  <div
+                    key={item.id}
+                    className="p-2 hover:bg-gray-100 cursor-pointer"
+                    onClick={() => handleAddToCart(item)}
+                  >
+                    {item.hindiName} ({item.name})
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Quantity</label>
+            <input
+              type="number"
+              value={quantity}
+              onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              min="1"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Unit</label>
+            <select
+              value={selectedUnit}
+              onChange={(e) => setSelectedUnit(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="kg">Kilogram (kg)</option>
+              <option value="gram">Gram (g)</option>
+              <option value="liter">Liter (L)</option>
+              <option value="ml">Milliliter (ml)</option>
+              <option value="piece">Piece</option>
+              <option value="dozen">Dozen</option>
+              <option value="packet">Packet</option>
+            </select>
+          </div>
+        </div>
+
+        <div className="mt-8">
+          <h2 className="text-xl font-semibold mb-4">Current Bill</h2>
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Item</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Quantity</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Unit</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Price</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {cart.map((item, index) => (
+                  <tr key={index}>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{item.hindiName}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.quantity}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.unit}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">₹{item.price}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">₹{item.total}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          
+          <div className="mt-4 text-right">
+            <p className="text-lg font-semibold">Total Amount: ₹{calculateTotal()}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default CustomerPage; 
