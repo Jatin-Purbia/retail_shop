@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
-// import * as XLSX from 'xlsx';
-// import jsPDF from 'jspdf';
-// import 'jspdf-autotable';
+import * as XLSX from 'xlsx';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
 
 // Import the same inventory from AdminPage
 const inventory = [
@@ -74,7 +74,7 @@ function CustomerPage() {
   const handleSearch = (e) => {
     const value = e.target.value;
     setSearchTerm(value);
-    const filtered = inventory.filter(item => 
+    const filtered = inventory.filter(item =>
       item.name.toLowerCase().includes(value.toLowerCase()) ||
       item.hindiName.includes(value)
     );
@@ -137,12 +137,66 @@ function CustomerPage() {
     return cart.reduce((sum, item) => sum + item.total, 0);
   };
 
-  // Placeholder export handlers
-  const handleExportPDF = () => {
-    alert('Export to PDF will be implemented after installing jspdf and jspdf-autotable.');
+  const generateBillData = () => {
+    const data = [['Customer Name:', customerName || 'N/A'], ['Mobile No.:', customerMobile || 'N/A'], []];
+    const itemsPerRow = 2;
+    const numItems = cart.length;
+
+    for (let i = 0; i < numItems; i += itemsPerRow) {
+      const row = [];
+      for (let j = 0; j < itemsPerRow; j++) {
+        const itemIndex = i + j;
+        if (itemIndex < numItems) {
+          const item = cart[itemIndex];
+          row.push([`${item.hindiName} (${item.quantity} ${item.unit})`, '']);
+        } else {
+          row.push(['', '']); // Empty columns for uneven rows
+        }
+      }
+      data.push(...row);
+      if (i + itemsPerRow < numItems) {
+        data.push([]); // Add an empty row as a separator between item rows
+      }
+    }
+    return data;
   };
+
+  const handleExportPDF = () => {
+    if (cart.length === 0) {
+      alert('Your cart is empty. Add items to export.');
+      return;
+    }
+
+    const doc = new jsPDF();
+    const billData = generateBillData();
+
+    doc.autoTable({
+      body: billData,
+      startY: 10,
+      columnStyles: { 0: { fontStyle: 'bold' } },
+      didDrawPage: (data) => {
+        // Add page number
+        const pageNumber = doc.internal.getNumberOfPages();
+        doc.setFontSize(10);
+        doc.setTextColor(150);
+        doc.text(`Page ${pageNumber}`, doc.internal.pageSize.getWidth() - 20, doc.internal.pageSize.getHeight() - 10);
+      }
+    });
+
+    doc.save(`bill_${customerName || 'guest'}_${new Date().toLocaleDateString()}.pdf`);
+  };
+
   const handleExportExcel = () => {
-    alert('Export to Excel will be implemented after installing xlsx.');
+    if (cart.length === 0) {
+      alert('Your cart is empty. Add items to export.');
+      return;
+    }
+
+    const billData = generateBillData();
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet(billData);
+    XLSX.utils.book_append_sheet(wb, ws, 'Bill');
+    XLSX.writeFile(wb, `bill_${customerName || 'guest'}_${new Date().toLocaleDateString()}.xlsx`);
   };
 
   return (
@@ -172,7 +226,7 @@ function CustomerPage() {
             />
           </div>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 items-end">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 items-end relative">
           <div>
             <label className="block text-sm font-semibold text-blue-700 mb-1">Search Item</label>
             <input
@@ -181,11 +235,11 @@ function CustomerPage() {
               onChange={handleSearch}
               onKeyDown={handleKeyDown}
               ref={searchInputRef}
-              className="w-full px-4 py-2 border border-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
+              className="w-full px-4 py -2 border border-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
               placeholder="Search items..."
             />
             {searchTerm && filteredItems.length > 0 && (
-              <div className="mt-2 border rounded-lg shadow bg-white max-h-48 overflow-y-auto z-10 relative">
+              <div className="mt-2 border rounded-lg shadow bg-white max-h-48 overflow-y-auto z-20 absolute w-full left-0">
                 {filteredItems.map((item, idx) => (
                   <div
                     key={item.id}
@@ -288,4 +342,4 @@ function CustomerPage() {
   );
 }
 
-export default CustomerPage; 
+export default CustomerPage;
