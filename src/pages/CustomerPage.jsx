@@ -1,8 +1,29 @@
 import React, { useState, useRef } from 'react';
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+import html2canvas from 'html2canvas';
 import inventory from '../inventoryData';
+
+// Helper to format date as DD.MM.YYYY
+function formatDate(date = new Date()) {
+  return date.toLocaleDateString('en-GB').replace(/\//g, '.');
+}
+
+// Helper to generate two-column table rows
+function generateTwoColumnTable(cart) {
+  const rows = [];
+  for (let i = 0; i < cart.length; i += 2) {
+    const left = cart[i];
+    const right = cart[i + 1];
+    rows.push([
+      left ? left.hindiName : '',
+      left ? `${left.quantity} ${left.unit}` : '',
+      right ? right.hindiName : '',
+      right ? `${right.quantity} ${right.unit}` : '',
+    ]);
+  }
+  return rows;
+}
 
 function CustomerPage() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -16,6 +37,10 @@ function CustomerPage() {
   const searchInputRef = useRef(null);
   const [selectedItem, setSelectedItem] = useState(null);
 
+  // Ref for the bill area
+  const billRef = useRef();
+
+  // Search and cart logic (unchanged)
   const handleSearch = (e) => {
     const value = e.target.value;
     setSearchTerm(value);
@@ -34,7 +59,6 @@ function CustomerPage() {
       ...selectedItem,
       quantity,
       unit: selectedUnit,
-      total: selectedItem.price * quantity
     };
     setCart([...cart, cartItem]);
     setSearchTerm('');
@@ -78,94 +102,84 @@ function CustomerPage() {
     setFilteredItems([]);
   };
 
-  const calculateTotal = () => {
-    return cart.reduce((sum, item) => sum + item.total, 0);
-  };
-
-  const generateBillData = () => {
-    const data = [['Customer Name:', customerName || 'N/A'], ['Mobile No.:', customerMobile || 'N/A'], []];
-    const itemsPerRow = 2;
-    const numItems = cart.length;
-
-    for (let i = 0; i < numItems; i += itemsPerRow) {
-      const row = [];
-      for (let j = 0; j < itemsPerRow; j++) {
-        const itemIndex = i + j;
-        if (itemIndex < numItems) {
-          const item = cart[itemIndex];
-          row.push([`${item.hindiName} (${item.quantity} ${item.unit})`, '']);
-        } else {
-          row.push(['', '']); // Empty columns for uneven rows
-        }
-      }
-      data.push(...row);
-      if (i + itemsPerRow < numItems) {
-        data.push([]); // Add an empty row as a separator between item rows
-      }
-    }
-    return data;
-  };
-
-  const handleExportPDF = () => {
+  // PDF export using html2canvas + jsPDF, capturing only the bill area
+  const handleExportPDF = async () => {
     if (cart.length === 0) {
       alert('Your cart is empty. Add items to export.');
       return;
     }
-
-    const doc = new jsPDF();
-    const billData = generateBillData();
-
-    doc.autoTable({
-      body: billData,
-      startY: 10,
-      columnStyles: { 0: { fontStyle: 'bold' } },
-      didDrawPage: (data) => {
-        // Add page number
-        const pageNumber = doc.internal.getNumberOfPages();
-        doc.setFontSize(10);
-        doc.setTextColor(150);
-        doc.text(`Page ${pageNumber}`, doc.internal.pageSize.getWidth() - 20, doc.internal.pageSize.getHeight() - 10);
-      }
+    const input = billRef.current;
+    if (!input) return;
+    const canvas = await html2canvas(input, { scale: 2 });
+    const imgData = canvas.toDataURL('image/png');
+    const pdf = new jsPDF({
+      orientation: 'portrait',
+      unit: 'pt',
+      format: 'a4'
     });
-
-    doc.save(`bill_${customerName || 'guest'}_${new Date().toLocaleDateString()}.pdf`);
+    const pdfWidth = pdf.internal.pageSize.getWidth();
+    const pdfHeight = pdf.internal.pageSize.getHeight();
+    const imgProps = {
+      width: canvas.width,
+      height: canvas.height
+    };
+    const ratio = Math.min(pdfWidth / imgProps.width, pdfHeight / imgProps.height);
+    const imgWidth = imgProps.width * ratio;
+    const imgHeight = imgProps.height * ratio;
+    pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
+    pdf.save(`bill_${customerName || 'guest'}_${formatDate()}.pdf`);
   };
 
+  // Excel export (optional, same two-column format)
   const handleExportExcel = () => {
     if (cart.length === 0) {
       alert('Your cart is empty. Add items to export.');
       return;
     }
-
-    const billData = generateBillData();
+    const wsData = [
+      ['! श्री राम जी !!'],
+      [`दिनांक ${formatDate()} को शाम तक देना है।`],
+      [
+        `नाम: ${customerName || ''}`,
+        '',
+        '',
+        `मो. नं. ${customerMobile || ''}`
+      ],
+      ['', '', '', ''], // Empty row for spacing
+      ...generateTwoColumnTable(cart)
+    ];
+    const ws = XLSX.utils.aoa_to_sheet(wsData);
+    ws['!cols'] = [
+      { wch: 20 }, { wch: 12 }, { wch: 20 }, { wch: 12 }
+    ];
     const wb = XLSX.utils.book_new();
-    const ws = XLSX.utils.aoa_to_sheet(billData);
     XLSX.utils.book_append_sheet(wb, ws, 'Bill');
-    XLSX.writeFile(wb, `bill_${customerName || 'guest'}_${new Date().toLocaleDateString()}.xlsx`);
+    XLSX.writeFile(wb, `bill_${customerName || 'customer'}_${formatDate()}.xlsx`);
   };
 
   return (
-    <div className="max-w-5xl mx-auto py-8">
-      <div className="bg-gradient-to-br from-blue-50 to-blue-100 shadow-xl rounded-2xl p-8 mb-8 border border-blue-200">
-        <h1 className="text-3xl font-bold mb-6 text-blue-800 text-center tracking-wide">Customer Billing</h1>
+    <div className="max-w-3xl mx-auto py-8">
+      <div className="bg-white shadow-xl rounded-2xl p-8 mb-8 border border-gray-200">
+        <h1 className="text-3xl font-bold mb-6 text-gray-800 text-center tracking-wide">Customer Billing</h1>
+        {/* Inputs as in your code */}
         <div className="flex flex-col md:flex-row md:space-x-8 mb-6">
           <div className="flex-1 mb-4 md:mb-0">
-            <label className="block text-sm font-semibold text-blue-700 mb-1">Customer Name</label>
+            <label className="block text-sm font-semibold text-gray-700 mb-1">Customer Name</label>
             <input
               type="text"
               value={customerName}
               onChange={e => setCustomerName(e.target.value)}
-              className="w-full px-4 py-2 border border-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
               placeholder="Enter customer name"
             />
           </div>
           <div className="flex-1">
-            <label className="block text-sm font-semibold text-blue-700 mb-1">Mobile Number</label>
+            <label className="block text-sm font-semibold text-gray-700 mb-1">Mobile Number</label>
             <input
               type="text"
               value={customerMobile}
               onChange={e => setCustomerMobile(e.target.value)}
-              className="w-full px-4 py-2 border border-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
               placeholder="Enter mobile number"
               maxLength={10}
             />
@@ -173,14 +187,14 @@ function CustomerPage() {
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 items-end relative">
           <div>
-            <label className="block text-sm font-semibold text-blue-700 mb-1">Search Item</label>
+            <label className="block text-sm font-semibold text-gray-700 mb-1">Search Item</label>
             <input
               type="text"
               value={searchTerm}
               onChange={handleSearch}
               onKeyDown={handleKeyDown}
               ref={searchInputRef}
-              className="w-full px-4 py -2 border border-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
               placeholder="Search items..."
             />
             {searchTerm && filteredItems.length > 0 && (
@@ -188,7 +202,7 @@ function CustomerPage() {
                 {filteredItems.map((item, idx) => (
                   <div
                     key={item.id}
-                    className={`p-2 cursor-pointer text-blue-800 ${idx === highlightedIndex ? 'bg-blue-200' : 'hover:bg-blue-100'}`}
+                    className={`p-2 cursor-pointer text-gray-800 ${idx === highlightedIndex ? 'bg-blue-200' : 'hover:bg-blue-100'}`}
                     onMouseEnter={() => setHighlightedIndex(idx)}
                     onMouseDown={() => handleRecommendationClick(item, idx)}
                   >
@@ -199,22 +213,22 @@ function CustomerPage() {
             )}
           </div>
           <div>
-            <label className="block text-sm font-semibold text-blue-700 mb-1">Quantity</label>
+            <label className="block text-sm font-semibold text-gray-700 mb-1">Quantity</label>
             <input
               type="number"
               value={quantity}
               onChange={e => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
-              className="w-full px-4 py-2 border border-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
               min="1"
             />
           </div>
           <div className="flex gap-2 items-end">
             <div className="flex-1">
-              <label className="block text-sm font-semibold text-blue-700 mb-1">Unit</label>
+              <label className="block text-sm font-semibold text-gray-700 mb-1">Unit</label>
               <select
                 value={selectedUnit}
                 onChange={e => setSelectedUnit(e.target.value)}
-                className="w-full px-4 py-2 border border-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
               >
                 <option value="किग्रा">किग्रा</option>
                 <option value="ग्राम">ग्राम</option>
@@ -238,49 +252,53 @@ function CustomerPage() {
             </button>
           </div>
         </div>
-        <div className="mt-10">
-          <h2 className="text-2xl font-semibold mb-4 text-blue-700">Current Bill</h2>
-          <div className="overflow-x-auto rounded-lg border border-blue-200 bg-white">
-            <table className="min-w-full divide-y divide-blue-100">
-              <thead className="bg-blue-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-bold text-blue-700 uppercase">Item (Hindi)</th>
-                  <th className="px-6 py-3 text-left text-xs font-bold text-blue-700 uppercase">Quantity</th>
-                  <th className="px-6 py-3 text-left text-xs font-bold text-blue-700 uppercase">Unit</th>
-                  <th className="px-6 py-3 text-left text-xs font-bold text-blue-700 uppercase">Price</th>
-                  <th className="px-6 py-3 text-left text-xs font-bold text-blue-700 uppercase">Total</th>
+        {/* BILL AREA TO EXPORT */}
+        <div
+          ref={billRef}
+          className="bg-white p-6 border border-black rounded-md"
+          style={{
+            fontFamily: 'DejaVu Sans, Arial, sans-serif',
+            color: '#222',
+            width: '100%',
+            maxWidth: 700,
+            margin: '0 auto'
+          }}
+        >
+          <div style={{ textAlign: 'center', fontWeight: 'bold', fontSize: 18, marginBottom: 2 }}>! श्री राम जी !!</div>
+          <div style={{ textAlign: 'center', fontSize: 14, marginBottom: 12 }}>
+            {`दिनांक ${formatDate()} को शाम तक देना है।`}
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, marginBottom: 8 }}>
+            <span>नाम: {customerName || ''}</span>
+            <span>मो. नं. {customerMobile || ''}</span>
+          </div>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
+            <tbody>
+              {generateTwoColumnTable(cart).map((row, idx) => (
+                <tr key={idx}>
+                  <td style={{ border: '1px solid #000', padding: 3, width: '28%' }}>{row[0]}</td>
+                  <td style={{ border: '1px solid #000', padding: 3, width: '12%' }}>{row[1]}</td>
+                  <td style={{ border: '1px solid #000', padding: 3, width: '28%' }}>{row[2]}</td>
+                  <td style={{ border: '1px solid #000', padding: 3, width: '12%' }}>{row[3]}</td>
                 </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-blue-100">
-                {cart.map((item, index) => (
-                  <tr key={index}>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-blue-900">{item.hindiName}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-blue-700">{item.quantity}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-blue-700">{item.unit}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-blue-700">₹{item.price}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-blue-700">₹{item.total}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <div className="mt-6 flex flex-col md:flex-row justify-between items-center gap-4">
-            <p className="text-xl font-bold text-blue-800">Total Amount: ₹{calculateTotal()}</p>
-            <div className="flex gap-4">
-              <button
-                className="px-6 py-2 bg-green-600 text-white rounded-lg font-semibold shadow hover:bg-green-700 transition"
-                onClick={handleExportExcel}
-              >
-                Export as Excel
-              </button>
-              <button
-                className="px-6 py-2 bg-red-600 text-white rounded-lg font-semibold shadow hover:bg-red-700 transition"
-                onClick={handleExportPDF}
-              >
-                Export as PDF
-              </button>
-            </div>
-          </div>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        {/* Export buttons */}
+        <div className="mt-6 flex gap-4 justify-end">
+          <button
+            className="px-6 py-2 bg-green-600 text-white rounded-lg font-semibold shadow hover:bg-green-700 transition"
+            onClick={handleExportExcel}
+          >
+            Export as Excel
+          </button>
+          <button
+            className="px-6 py-2 bg-red-600 text-white rounded-lg font-semibold shadow hover:bg-red-700 transition"
+            onClick={handleExportPDF}
+          >
+            Export as PDF
+          </button>
         </div>
       </div>
     </div>
