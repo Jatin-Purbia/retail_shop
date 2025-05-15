@@ -44,6 +44,7 @@ function CustomerPage() {
   const [selectedItem, setSelectedItem] = useState(null);
   const [deliveryDate, setDeliveryDate] = useState(new Date());
   const [deliveryTimeHindi, setDeliveryTimeHindi] = useState('सुबह'); // Default to morning
+  const nameInputRef = useRef(null); // Ref for customer name input
 
   // Ref for the bill area
   const billRef = useRef();
@@ -219,7 +220,7 @@ function CustomerPage() {
 
     const wsData = [
       ['! श्री राम जी !!'],
-      [`दिनांक ${deliveryDate} को ${deliveryTimeHindi} तक देना है।`],
+      [`दिनांक ${formattedDeliveryDate} को ${deliveryTimeHindi} तक देना है।`],
       [
         `नाम: ${customerName ? customerName : ''}`,
         '',
@@ -266,6 +267,36 @@ function CustomerPage() {
   };
   const hindiDeliveryTimeBill = timeMappingBill[deliveryTimeHindi] || '';
 
+  // Handle keydown for name suggestions
+  const handleNameKeyDown = (e) => {
+    if (nameSuggestions.length === 0) return;
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setHighlightedIndex((prev) => {
+        const next = (prev + 1) % nameSuggestions.length;
+        return next;
+      });
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setHighlightedIndex((prev) => {
+        const next = (prev - 1 + nameSuggestions.length) % nameSuggestions.length;
+        return next;
+      });
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      if (highlightedIndex >= 0) {
+        const selectedName = nameSuggestions[highlightedIndex];
+        setCustomerName(selectedName);
+        setShowNameSuggestions(false);
+        setHighlightedIndex(-1); // Reset highlighted index
+        if (nameInputRef.current) {
+          nameInputRef.current.blur(); // Remove focus from input
+        }
+      }
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-100 p-4 sm:p-6 lg:p-8">
       <div className="max-w-4xl mx-auto">
@@ -286,21 +317,27 @@ function CustomerPage() {
                 onChange={(e) => {
                   setCustomerName(e.target.value);
                   setShowNameSuggestions(true);
+                  setHighlightedIndex(-1); // Reset index when input changes
                 }}
                 onFocus={() => setShowNameSuggestions(true)}
                 onBlur={() => setTimeout(() => setShowNameSuggestions(false), 200)}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
                 placeholder="Enter customer name in English or Hindi"
+                onKeyDown={handleNameKeyDown}
+                ref={nameInputRef} // Attach the ref
               />
               {showNameSuggestions && nameSuggestions.length > 0 && (
                 <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-48 overflow-y-auto">
                   {nameSuggestions.map((suggestion, index) => (
                     <div
                       key={index}
-                      className="px-4 py-2 hover:bg-blue-100 cursor-pointer"
+                      className={`px-4 py-2 hover:bg-blue-100 cursor-pointer ${
+                        index === highlightedIndex ? 'bg-blue-200' : ''
+                      }`}
                       onMouseDown={() => {
                         setCustomerName(suggestion);
                         setShowNameSuggestions(false);
+                        setHighlightedIndex(-1);
                       }}
                     >
                       {suggestion}
@@ -407,7 +444,7 @@ function CustomerPage() {
                 <select
                   value={selectedUnit}
                   onChange={(e) => setSelectedUnit(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus :ring-2 focus:ring-blue-400 bg-white"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
                 >
                   <option value="किग्रा">कि.ग्रा.</option>
                   <option value="ग्राम">ग्राम</option>
@@ -452,7 +489,7 @@ function CustomerPage() {
             {/* <div className="text-sm mb-2">
               डिलीवरी: {formattedDeliveryDateBill}, {hindiDeliveryTimeBill}
             </div> */}
-            
+
             <table className="w-full border-collapse text-sm">
               <thead>
                 <tr>
