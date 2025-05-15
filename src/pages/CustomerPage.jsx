@@ -281,19 +281,32 @@ function CustomerPage() {
         XLSX.writeFile(wb, `bill_${customerName || 'customer'}_${formatDate()}.xlsx`);
     };
 
+    const handleClearCart = () => {
+        setCart([]);
+        setSearchTerm('');
+        setFilteredItems([]);
+        setQuantity(1);
+        setHighlightedIndex(-1);
+        setSelectedItem(null);
+        setCustomerName('');
+        setCustomerMobile('');
+        setDeliveryDate(new Date());
+        setDeliveryTimeHindi('सुबह');
+    };
+
     const formattedDeliveryDateBill = formatDate(deliveryDate);
     const timeMappingBill = { सुबह: 'सुबह', दोपहर: 'दोपहर', शाम: 'शाम' };
     const hindiDeliveryTimeBill = timeMappingBill[deliveryTimeHindi] || '';
 
     return (
         <div className="flex flex-col p-2 items-center justify-center min-h-screen bg-primary-light overflow-hidden">
-            <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-4xl">
-                <h1 className="text-3xl font-bold text-primary mb-2 text-center">Customer Billing</h1>
-                <p className="text-accent text-center mb-6">Create and manage customer bills</p>
+            <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-7xl">
+                <h1 className="text-4xl font-bold text-primary mb-3 text-center">Customer Billing</h1>
+                <p className="text-lg text-accent text-center mb-8">Create and manage customer bills</p>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
                     <div className="relative">
-                        <label className="block text-primary-dark font-semibold mb-1">
+                        <label className="block text-lg text-primary-dark font-semibold mb-2">
                             ग्राहक का नाम (हिन्दी)
                         </label>
                         <input
@@ -303,7 +316,7 @@ function CustomerPage() {
                             onFocus={() => setShowNameSuggestions(true)}
                             onBlur={() => setTimeout(() => setShowNameSuggestions(false), 200)}
                             onKeyDown={handleNameKeyDown}
-                            className="w-full px-4 py-2 bg-gray-200 border border-accent-light rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                            className="w-full px-4 py-3 text-lg bg-gray-200 border border-accent-light rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                             placeholder="Type name in English (e.g., 'Rahul')"
                             ref={nameInputRef}
                         />
@@ -312,10 +325,9 @@ function CustomerPage() {
                                 {nameSuggestions.map((suggestion, index) => (
                                     <div
                                         key={index}
-                                        className={`px-4 py-2 hover:bg-primary-light/10 cursor-pointer ${
+                                        className={`px-4 py-2 text-lg hover:bg-primary-light/10 cursor-pointer ${
                                             index === highlightedIndex ? 'bg-primary-light/20' : ''
                                         }`}
-                                        onMouseEnter={() => setHighlightedIndex(index)}
                                         onMouseDown={() => {
                                             setCustomerName(suggestion);
                                             setShowNameSuggestions(false);
@@ -327,17 +339,16 @@ function CustomerPage() {
                                 ))}
                             </div>
                         )}
-                        
                     </div>
                     <div>
-                        <label className="block text-primary-dark font-semibold mb-1">
+                        <label className="block text-lg text-primary-dark font-semibold mb-2">
                             मोबाइल नंबर
                         </label>
                         <input
                             type="text"
                             value={customerMobile}
                             onChange={(e) => setCustomerMobile(e.target.value)}
-                            className="w-full px-4 py-2 bg-gray-200 border border-accent-light rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                            className="w-full px-4 py-3 text-lg bg-gray-200 border border-accent-light rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                             placeholder="मोबाइल नंबर दर्ज करें"
                             maxLength={10}
                         />
@@ -346,24 +357,24 @@ function CustomerPage() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
                     <div>
-                        <label className="block text-primary-dark font-semibold mb-1">
+                        <label className="block text-lg text-primary-dark font-semibold mb-2">
                             डिलीवरी की तारीख
                         </label>
                         <DatePicker
                             selected={deliveryDate}
                             onChange={(date) => setDeliveryDate(date)}
                             dateFormat="dd.MM.yyyy"
-                            className="w-full px-4 py-2 bg-gray-200 border border-accent-light rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                            className="w-full px-4 py-3 text-lg bg-gray-200 border border-accent-light rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                         />
                     </div>
                     <div>
-                        <label className="block text-primary-dark font-semibold mb-1">
+                        <label className="block text-lg text-primary-dark font-semibold mb-2">
                             डिलीवरी का समय
                         </label>
                         <select
                             value={deliveryTimeHindi}
                             onChange={handleDeliveryTimeChange}
-                            className="w-full px-4 py-2 bg-gray-200 border border-accent-light rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                            className="w-full px-4 py-3 text-lg bg-gray-200 border border-accent-light rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                         >
                             <option value="सुबह">सुबह</option>
                             <option value="दोपहर">दोपहर</option>
@@ -374,7 +385,7 @@ function CustomerPage() {
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 items-end relative">
                     <div>
-                        <label className="block text-primary-dark font-semibold mb-1">
+                        <label className="block text-lg text-primary-dark font-semibold mb-2">
                             उत्पाद खोजें
                         </label>
                         <div className="relative">
@@ -384,7 +395,7 @@ function CustomerPage() {
                                 onChange={handleSearch}
                                 onKeyDown={handleSearchKeyDown}
                                 ref={searchInputRef}
-                                className="w-full px-4 py-2 bg-gray-200 border border-accent-light rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                                className="w-full px-4 py-3 text-lg bg-gray-200 border border-accent-light rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                                 placeholder="Search products in English or Hindi..."
                             />
                             {searchTerm && filteredItems.length > 0 && (
@@ -392,7 +403,7 @@ function CustomerPage() {
                                     {filteredItems.map((item, idx) => (
                                         <div
                                             key={item.id}
-                                            className={`p-2 cursor-pointer text-primary-dark ${
+                                            className={`p-2 text-lg cursor-pointer text-primary-dark ${
                                                 idx === highlightedIndex ? 'bg-primary-light/20' : 'hover:bg-primary-light/10'
                                             }`}
                                             onMouseEnter={() => {
@@ -414,26 +425,26 @@ function CustomerPage() {
                         </div>
                     </div>
                     <div>
-                        <label className="block text-primary-dark font-semibold mb-1">
+                        <label className="block text-lg text-primary-dark font-semibold mb-2">
                             मात्रा
                         </label>
                         <input
                             type="number"
                             value={quantity}
                             onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
-                            className="w-full px-4 py-2 bg-gray-200 border border-accent-light rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                            className="w-full px-4 py-3 text-lg bg-gray-200 border border-accent-light rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                             min="1"
                         />
                     </div>
                     <div className="flex gap-2 items-end">
                         <div className="flex-1">
-                            <label className="block text-primary-dark font-semibold mb-1">
+                            <label className="block text-lg text-primary-dark font-semibold mb-2">
                                 इकाई
                             </label>
                             <select
                                 value={selectedUnit}
                                 onChange={(e) => setSelectedUnit(e.target.value)}
-                                className="w-full px-4 py-2 bg-gray-200 border border-accent-light rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                                className="w-full px-4 py-3 text-lg bg-gray-200 border border-accent-light rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                             >
                                 <option value="किग्रा">कि.ग्रा.</option>
                                 <option value="ग्राम">ग्राम</option>
@@ -446,12 +457,21 @@ function CustomerPage() {
                         <button
                             type="button"
                             onClick={handleAddToCart}
-                            className="px-6 py-2 bg-primary hover:bg-primary-dark text-white rounded-lg font-semibold shadow transition disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="px-6 py-3 text-lg bg-primary hover:bg-primary-dark text-white rounded-lg font-semibold shadow transition disabled:opacity-50 disabled:cursor-not-allowed"
                             disabled={!selectedItem}
                         >
                             उत्पाद जोड़ें
                         </button>
                     </div>
+                </div>
+
+                <div className="flex justify-end mb-4">
+                    <button
+                        onClick={handleClearCart}
+                        className="px-6 py-3 text-lg bg-red-500 hover:bg-red-600 text-white rounded-lg font-semibold shadow transition"
+                    >
+                        Clear All
+                    </button>
                 </div>
 
                 <div
@@ -461,47 +481,47 @@ function CustomerPage() {
                         fontFamily: 'DejaVu Sans, Arial, sans-serif',
                         color: '#222',
                         width: '100%',
-                        maxWidth: 700,
+                        maxWidth: '100%',
                         margin: '0 auto',
                     }}
                 >
-                    <div className="text-center font-bold text-lg mb-2 text-gray-900">! श्री राम जी !!</div>
-                    <div className="text-center text-sm mb-4 text-gray-900">
+                    <div className="text-center font-bold text-2xl mb-4 text-gray-900">! श्री राम जी !!</div>
+                    <div className="text-center text-lg mb-4 text-gray-900">
                         {`दिनांक ${formattedDeliveryDateBill} को ${hindiDeliveryTimeBill} तक देना है।`}
                     </div>
-                    <div className="flex justify-between text-sm mb-4 text-gray-900">
+                    <div className="flex justify-between text-lg mb-4 text-gray-900">
                         <span>नाम: {customerName || ''}</span>
                         <span>मो. नं. {customerMobile || ''}</span>
                     </div>
 
-                    <table className="w-full border-collapse text-sm">
+                    <table className="w-full border-collapse text-lg">
                         <thead>
                             <tr>
-                                <th className="border border-gray-800 p-2 w-1/4 text-center text-gray-900">
+                                <th className="border border-gray-800 p-3 w-1/4 text-center text-gray-900 font-bold">
                                     उत्पाद (हिन्दी)
                                 </th>
-                                <th className="border border-gray-800 p-2 w-1/6 text-center text-gray-900">
+                                <th className="border border-gray-800 p-3 w-1/6 text-center text-gray-900 font-bold">
                                     मात्रा
                                 </th>
-                                <th className="border border-gray-800 p-2 w-1/12"></th>
-                                <th className="border border-gray-800 p-2 w-1/4 text-center text-gray-900">
+                                <th className="border border-gray-800 p-3 w-1/12"></th>
+                                <th className="border border-gray-800 p-3 w-1/4 text-center text-gray-900 font-bold">
                                     उत्पाद (हिन्दी)
                                 </th>
-                                <th className="border border-gray-800 p-2 w-1/6 text-center text-gray-900">
+                                <th className="border border-gray-800 p-3 w-1/6 text-center text-gray-900 font-bold">
                                     मात्रा
                                 </th>
-                                <th className="border border-gray-800 p-2 w-1/12"></th>
+                                <th className="border border-gray-800 p-3 w-1/12"></th>
                             </tr>
                         </thead>
                         <tbody>
                             {generateTwoColumnTable(cart).map((row, idx) => (
                                 <tr key={idx}>
-                                    <td className="border border-gray-800 p-2 text-center text-gray-900">{row[0]}</td>
-                                    <td className="border border-gray-800 p-2 text-center text-gray-900">{row[1]}</td>
-                                    <td className="border border-gray-800 p-2"></td>
-                                    <td className="border border-gray-800 p-2 text-center text-gray-900">{row[3]}</td>
-                                    <td className="border border-gray-800 p-2 text-center text-gray-900">{row[4]}</td>
-                                    <td className="border border-gray-800 p-2"></td>
+                                    <td className="border border-gray-800 p-3 text-center text-gray-900">{row[0]}</td>
+                                    <td className="border border-gray-800 p-3 text-center text-gray-900">{row[1]}</td>
+                                    <td className="border border-gray-800 p-3"></td>
+                                    <td className="border border-gray-800 p-3 text-center text-gray-900">{row[3]}</td>
+                                    <td className="border border-gray-800 p-3 text-center text-gray-900">{row[4]}</td>
+                                    <td className="border border-gray-800 p-3"></td>
                                 </tr>
                             ))}
                         </tbody>
@@ -510,13 +530,13 @@ function CustomerPage() {
 
                 <div className="flex flex-col mt-5 sm:flex-row gap-4 justify-end">
                     <button
-                        className="px-6 py-2 bg-primary hover:bg-primary-dark text-white rounded-lg font-semibold shadow transition flex-1 sm:flex-none"
+                        className="px-6 py-3 text-lg bg-primary hover:bg-primary-dark text-white rounded-lg font-semibold shadow transition flex-1 sm:flex-none"
                         onClick={handleExportExcel}
                     >
                         Export as Excel
                     </button>
                     <button
-                        className="px-6 py-2 bg-primary hover:bg-primary-dark text-white rounded-lg font-semibold shadow transition flex-1 sm:flex-none"
+                        className="px-6 py-3 text-lg bg-primary hover:bg-primary-dark text-white rounded-lg font-semibold shadow transition flex-1 sm:flex-none"
                         onClick={handleExportPDF}
                     >
                         Export as PDF
