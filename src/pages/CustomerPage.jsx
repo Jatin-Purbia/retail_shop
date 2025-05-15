@@ -9,7 +9,7 @@ function formatDate(date = new Date()) {
   return date.toLocaleDateString('en-GB').replace(/\//g, '.');
 }
 
-// Helper to generate two-column table rows
+// Helper to generate two-column table rows with a blank third column
 function generateTwoColumnTable(cart) {
   const rows = [];
   for (let i = 0; i < cart.length; i += 2) {
@@ -18,8 +18,10 @@ function generateTwoColumnTable(cart) {
     rows.push([
       left ? left.hindiName : '',
       left ? `${left.quantity} ${left.unit}` : '',
+      '', // Blank column
       right ? right.hindiName : '',
       right ? `${right.quantity} ${right.unit}` : '',
+      '', // Blank column
     ]);
   }
   return rows;
@@ -130,7 +132,7 @@ function CustomerPage() {
     pdf.save(`bill_${customerName || 'guest'}_${formatDate()}.pdf`);
   };
 
-  // Excel export (optional, same two-column format)
+  // Excel export
   const handleExportExcel = () => {
     if (cart.length === 0) {
       alert('Your cart is empty. Add items to export.');
@@ -140,18 +142,30 @@ function CustomerPage() {
       ['! श्री राम जी !!'],
       [`दिनांक ${formatDate()} को शाम तक देना है।`],
       [
-        `नाम: ${customerName || ''}`,
+        `नाम: ${customerName ? customerName : ''}`,
         '',
         '',
-        `मो. नं. ${customerMobile || ''}`
+        `मो. नं. ${customerMobile ? customerMobile : ''}`,
+        '',
+        ''
       ],
-      ['', '', '', ''], // Empty row for spacing
+      ['', '', '', '', '', ''], // Empty row for spacing
+      ['उत्पाद (हिन्दी)', 'मात्रा', '', 'उत्पाद (हिन्दी)', 'मात्रा', ''], // Headers
       ...generateTwoColumnTable(cart)
     ];
     const ws = XLSX.utils.aoa_to_sheet(wsData);
     ws['!cols'] = [
-      { wch: 20 }, { wch: 12 }, { wch: 20 }, { wch: 12 }
+      { wch: 20 }, { wch: 12 }, { wch: 5 }, { wch: 20 }, { wch: 12 }, { wch: 5 }
     ];
+    // Center align all cells
+    const range = XLSX.utils.decode_range(ws['!ref']);
+    for (let R = range.s.r; R <= range.e.r; ++R) {
+      for (let C = range.s.c; C <= range.e.c; ++C) {
+        const cell_address = XLSX.utils.encode_cell({ c: C, r: R });
+        if (!ws[cell_address]) continue;
+        ws[cell_address].s = { alignment: { horizontal: 'center' } };
+      }
+    }
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Bill');
     XLSX.writeFile(wb, `bill_${customerName || 'customer'}_${formatDate()}.xlsx`);
@@ -164,30 +178,30 @@ function CustomerPage() {
         {/* Inputs as in your code */}
         <div className="flex flex-col md:flex-row md:space-x-8 mb-6">
           <div className="flex-1 mb-4 md:mb-0">
-            <label className="block text-sm font-semibold text-gray-700 mb-1">Customer Name</label>
+            <label className="block text-sm font-semibold text-gray-700 mb-1">ग्राहक का नाम (हिन्दी)</label>
             <input
               type="text"
               value={customerName}
               onChange={e => setCustomerName(e.target.value)}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
-              placeholder="Enter customer name"
+              placeholder="ग्राहक का नाम दर्ज करें"
             />
           </div>
           <div className="flex-1">
-            <label className="block text-sm font-semibold text-gray-700 mb-1">Mobile Number</label>
+            <label className="block text-sm font-semibold text-gray-700 mb-1">मोबाइल नंबर</label>
             <input
               type="text"
               value={customerMobile}
               onChange={e => setCustomerMobile(e.target.value)}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
-              placeholder="Enter mobile number"
+              placeholder="मोबाइल नंबर दर्ज करें"
               maxLength={10}
             />
           </div>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 items-end relative">
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1">Search Item</label>
+            <label className="block text-sm font-semibold text-gray-700 mb-1">उत्पाद खोजें</label>
             <input
               type="text"
               value={searchTerm}
@@ -195,7 +209,7 @@ function CustomerPage() {
               onKeyDown={handleKeyDown}
               ref={searchInputRef}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
-              placeholder="Search items..."
+              placeholder="उत्पाद का नाम दर्ज करें..."
             />
             {searchTerm && filteredItems.length > 0 && (
               <div className="mt-2 border rounded-lg shadow bg-white max-h-48 overflow-y-auto z-20 absolute w-full left-0">
@@ -213,7 +227,7 @@ function CustomerPage() {
             )}
           </div>
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1">Quantity</label>
+            <label className="block text-sm font-semibold text-gray-700 mb-1">मात्रा</label>
             <input
               type="number"
               value={quantity}
@@ -224,7 +238,7 @@ function CustomerPage() {
           </div>
           <div className="flex gap-2 items-end">
             <div className="flex-1">
-              <label className="block text-sm font-semibold text-gray-700 mb-1">Unit</label>
+              <label className="block text-sm font-semibold text-gray-700 mb-1">इकाई</label>
               <select
                 value={selectedUnit}
                 onChange={e => setSelectedUnit(e.target.value)}
@@ -248,7 +262,7 @@ function CustomerPage() {
               className="ml-2 px-6 py-2 bg-blue-600 text-white rounded-lg font-semibold shadow hover:bg-blue-700 transition"
               disabled={!selectedItem}
             >
-              Add Product
+              उत्पाद जोड़ें
             </button>
           </div>
         </div>
@@ -269,19 +283,42 @@ function CustomerPage() {
             {`दिनांक ${formatDate()} को शाम तक देना है।`}
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, marginBottom: 8 }}>
-            <span>नाम: {customerName || ''}</span>
-            <span>मो. नं. {customerMobile || ''}</span>
+            <span>नाम: {customerName ? customerName : ''}</span>
+            <span>मो. नं. {customerMobile ? customerMobile : ''}</span>
           </div>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
+            <thead>
+              <tr>
+                <th style={{ border: '1px solid #000', padding: 3, width: '26%', textAlign: 'center' }}>उत्पाद (हिन्दी)</th>
+                <th style={{ border: '1px solid #000', padding: 3, width: '12%', textAlign: 'center' }}>मात्रा</th>
+                <th style={{ border: '1px solid #000', padding: 3, width: '12%' }}></th> {/* Blank */}
+                <th style={{ border: '1px solid #000', padding: 3, width: '26%', textAlign: 'center' }}>उत्पाद (हिन्दी)</th>
+                <th style={{ border: '1px solid #000', padding: 3, width: '12%', textAlign: 'center' }}>मात्रा</th>
+                <th style={{ border: '1px solid #000', padding: 3, width: '12%' }}></th> {/* Blank */}
+              </tr>
+            </thead>
             <tbody>
               {generateTwoColumnTable(cart).map((row, idx) => (
                 <tr key={idx}>
-                  <td style={{ border: '1px solid #000', padding: 3, width: '28%' }}>{row[0]}</td>
-                  <td style={{ border: '1px solid #000', padding: 3, width: '12%' }}>{row[1]}</td>
-                  <td style={{ border: '1px solid #000', padding: 3, width: '28%' }}>{row[2]}</td>
-                  <td style={{ border: '1px solid #000', padding: 3, width: '12%' }}>{row[3]}</td>
+                  <td style={{ border: '1px solid #000', padding: 3, textAlign: 'center' }}>{row[0]}</td>
+                  <td style={{ border: '1px solid #000', padding: 3, textAlign: 'center' }}>{row[1]}</td>
+                  <td style={{ border: '1px solid #000', padding: 3 }}></td> {/* Blank */}
+                  <td style={{ border: '1px solid #000', padding: 3, textAlign: 'center' }}>{row[3]}</td>
+                  <td style={{ border: '1px solid #000', padding: 3, textAlign: 'center' }}>{row[4]}</td>
+                  <td style={{ border: '1px solid #000', padding: 3 }}></td> {/* Blank */}
                 </tr>
               ))}
+              {/* Fill remaining cells if cart has odd number of items */}
+              {cart.length % 2 !== 0 && (
+                <tr>
+                  <td style={{ border: '1px solid #000', padding: 3, textAlign: 'center' }}>{cart[cart.length - 1].hindiName}</td>
+                  <td style={{ border: '1px solid #000', padding: 3, textAlign: 'center' }}>{`${cart[cart.length - 1].quantity} ${cart[cart.length - 1].unit}`}</td>
+                  <td style={{ border: '1px solid #000', padding: 3 }}></td>
+                  <td style={{ border: '1px solid #000', padding: 3 }}></td>
+                  <td style={{ border: '1px solid #000', padding: 3 }}></td>
+                  <td style={{ border: '1px solid #000', padding: 3 }}></td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
