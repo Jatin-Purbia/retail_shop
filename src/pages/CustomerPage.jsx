@@ -3,6 +3,8 @@ import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import inventory from '../inventoryData';
+import DatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
 
 // Helper to format date as DD.MM.YYYY
 function formatDate(date = new Date()) {
@@ -40,6 +42,8 @@ function CustomerPage() {
   const [showNameSuggestions, setShowNameSuggestions] = useState(false);
   const searchInputRef = useRef(null);
   const [selectedItem, setSelectedItem] = useState(null);
+  const [deliveryDate, setDeliveryDate] = useState(new Date());
+  const [deliveryTimeHindi, setDeliveryTimeHindi] = useState('सुबह'); // Default to morning
 
   // Ref for the bill area
   const billRef = useRef();
@@ -51,7 +55,11 @@ function CustomerPage() {
       return;
     }
     try {
-      const response = await fetch(`https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=hi&dt=t&q=${encodeURIComponent(text)}`);
+      const response = await fetch(
+        `https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=hi&dt=t&q=${encodeURIComponent(
+          text
+        )}`
+      );
       const data = await response.json();
       if (data && data[0]) {
         // Extracting the most probable translation
@@ -81,51 +89,52 @@ function CustomerPage() {
   }, [customerName]);
 
   // Search and cart logic
-    const handleSearch = (e) => {
-        const value = e.target.value;
-        setSearchTerm(value);
-        const filtered = inventory.filter((item) =>
-            item.name.toLowerCase().includes(value.toLowerCase()) ||
-            item.hindiName.includes(value)
-        );
-        setFilteredItems(filtered);
-        setHighlightedIndex(filtered.length > 0 ? 0 : -1);
-        setSelectedItem(null);
+  const handleSearch = (e) => {
+    const value = e.target.value;
+    setSearchTerm(value);
+    const filtered = inventory.filter(
+      (item) =>
+        item.name.toLowerCase().includes(value.toLowerCase()) ||
+        item.hindiName.includes(value)
+    );
+    setFilteredItems(filtered);
+    setHighlightedIndex(filtered.length > 0 ? 0 : -1);
+    setSelectedItem(null);
+  };
+
+  const handleAddToCart = () => {
+    if (!selectedItem) return;
+
+    const existingItemIndex = cart.findIndex(
+      (item) => item.id === selectedItem.id && item.unit === selectedUnit
+    );
+
+    const cartItem = {
+      ...selectedItem,
+      quantity,
+      unit: selectedUnit,
     };
 
-    const handleAddToCart = () => {
-        if (!selectedItem) return;
+    if (existingItemIndex > -1) {
+      // Update quantity if item exists with the same unit
+      const updatedCart = [...cart];
+      updatedCart[existingItemIndex] = {
+        ...updatedCart[existingItemIndex],
+        quantity: updatedCart[existingItemIndex].quantity + quantity,
+      };
+      setCart(updatedCart);
+    } else {
+      // Add new item to cart
+      setCart((prevCart) => [...prevCart, cartItem]);
+    }
 
-        const existingItemIndex = cart.findIndex(
-            (item) => item.id === selectedItem.id && item.unit === selectedUnit
-        );
-
-        const cartItem = {
-            ...selectedItem,
-            quantity,
-            unit: selectedUnit,
-        };
-
-        if (existingItemIndex > -1) {
-            // Update quantity if item exists with the same unit
-            const updatedCart = [...cart];
-            updatedCart[existingItemIndex] = {
-                ...updatedCart[existingItemIndex],
-                quantity: updatedCart[existingItemIndex].quantity + quantity,
-            };
-            setCart(updatedCart);
-        } else {
-            // Add new item to cart
-            setCart((prevCart) => [...prevCart, cartItem]);
-        }
-
-        setSearchTerm('');
-        setFilteredItems([]);
-        setQuantity(1);
-        setHighlightedIndex(-1);
-        setSelectedItem(null);
-        if (searchInputRef.current) searchInputRef.current.focus();
-    };
+    setSearchTerm('');
+    setFilteredItems([]);
+    setQuantity(1);
+    setHighlightedIndex(-1);
+    setSelectedItem(null);
+    if (searchInputRef.current) searchInputRef.current.focus();
+  };
 
   const handleKeyDown = (e) => {
     if (!filteredItems.length) return;
@@ -159,6 +168,10 @@ function CustomerPage() {
     setSelectedItem(item);
     setSearchTerm(item.hindiName + ' (' + item.name + ')');
     setFilteredItems([]);
+  };
+
+  const handleDeliveryTimeChange = (event) => {
+    setDeliveryTimeHindi(event.target.value);
   };
 
   // PDF export using html2canvas + jsPDF, capturing only the bill area
@@ -195,9 +208,18 @@ function CustomerPage() {
       alert('Your cart is empty. Add items to export.');
       return;
     }
+    const formattedDeliveryDate = formatDate(deliveryDate);
+
+    const timeMapping = {
+      सुबह: 'Morning',
+      दोपहर: 'Afternoon',
+      शाम: 'Evening',
+    };
+    const englishDeliveryTime = timeMapping[deliveryTimeHindi] || '';
+
     const wsData = [
       ['! श्री राम जी !!'],
-      [`दिनांक ${formatDate()} को शाम तक देना है।`],
+      [`दिनांक ${deliveryDate} को ${deliveryTimeHindi} तक देना है।`],
       [
         `नाम: ${customerName ? customerName : ''}`,
         '',
@@ -207,6 +229,7 @@ function CustomerPage() {
         '',
         '',
       ],
+      [`डिलीवरी: ${formattedDeliveryDate}, ${englishDeliveryTime}`, '', '', '', '', ''],
       ['', '', '', '', '', ''], // Empty row for spacing
       ['उत्पाद (हिन्दी)', 'मात्रा', '', 'उत्पाद (हिन्दी)', 'मात्रा', ''], // Headers
       ...generateTwoColumnTable(cart),
@@ -233,6 +256,15 @@ function CustomerPage() {
     XLSX.utils.book_append_sheet(wb, ws, 'Bill');
     XLSX.writeFile(wb, `bill_${customerName || 'customer'}_${formatDate()}.xlsx`);
   };
+
+  const formattedDeliveryDateBill = formatDate(deliveryDate);
+
+  const timeMappingBill = {
+    सुबह: 'सुबह',
+    दोपहर: 'दोपहर',
+    शाम: 'शाम',
+  };
+  const hindiDeliveryTimeBill = timeMappingBill[deliveryTimeHindi] || '';
 
   return (
     <div className="min-h-screen bg-gray-100 p-4 sm:p-6 lg:p-8">
@@ -292,6 +324,35 @@ function CustomerPage() {
             </div>
           </div>
 
+          {/* Delivery Date and Time */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1">
+                डिलीवरी की तारीख
+              </label>
+              <DatePicker
+                selected={deliveryDate}
+                onChange={(date) => setDeliveryDate(date)}
+                dateFormat="dd.MM.yyyy"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1">
+                डिलीवरी का समय
+              </label>
+              <select
+                value={deliveryTimeHindi}
+                onChange={handleDeliveryTimeChange}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
+              >
+                <option value="सुबह">सुबह</option>
+                <option value="दोपहर">दोपहर</option>
+                <option value="शाम">शाम</option>
+              </select>
+            </div>
+          </div>
+
           {/* Product Search and Add Section */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 items-end relative">
             <div>
@@ -346,7 +407,7 @@ function CustomerPage() {
                 <select
                   value={selectedUnit}
                   onChange={(e) => setSelectedUnit(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus :ring-2 focus:ring-blue-400 bg-white"
                 >
                   <option value="किग्रा">कि.ग्रा.</option>
                   <option value="ग्राम">ग्राम</option>
@@ -381,12 +442,17 @@ function CustomerPage() {
           >
             <div className="text-center font-bold text-lg mb-2">! श्री राम जी !!</div>
             <div className="text-center text-sm mb-4">
-              {`दिनांक ${formatDate()} को शाम तक देना है।`}
+              {`दिनांक ${formattedDeliveryDateBill} को ${hindiDeliveryTimeBill} तक देना है।`}
             </div>
             <div className="flex justify-between text-sm mb-4">
               <span>नाम: {customerName || ''}</span>
               <span>मो. नं. {customerMobile || ''}</span>
             </div>
+
+            {/* <div className="text-sm mb-2">
+              डिलीवरी: {formattedDeliveryDateBill}, {hindiDeliveryTimeBill}
+            </div> */}
+            
             <table className="w-full border-collapse text-sm">
               <thead>
                 <tr>
