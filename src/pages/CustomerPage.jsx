@@ -298,247 +298,240 @@ function CustomerPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 p-4 sm:p-6 lg:p-8">
-      <div className="max-w-4xl mx-auto">
-        <div className="bg-white shadow-xl rounded-2xl p-6 sm:p-8">
-          <h1 className="text-2xl sm:text-3xl font-bold mb-6 text-gray-800 text-center tracking-wide">
-            Customer Billing
-          </h1>
+    <div className="flex flex-col p-2 items-center justify-center min-h-screen bg-primary-light overflow-hidden">
+      <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-4xl">
+        <h1 className="text-3xl font-bold text-primary mb-2 text-center">Customer Billing</h1>
+        <p className="text-accent text-center mb-6">Create and manage customer bills</p>
 
-          {/* Customer Details Section */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+        {/* Customer Details Section */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+          <div className="relative">
+            <label className="block text-primary-dark font-semibold mb-1">
+              ग्राहक का नाम (हिन्दी)
+            </label>
+            <input
+              type="text"
+              value={customerName}
+              onChange={(e) => {
+                setCustomerName(e.target.value);
+                setShowNameSuggestions(true);
+                setHighlightedIndex(-1);
+              }}
+              onFocus={() => setShowNameSuggestions(true)}
+              onBlur={() => setTimeout(() => setShowNameSuggestions(false), 200)}
+              className="w-full px-4 py-2 bg-gray-200 border border-accent-light rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+              placeholder="Enter customer name in English or Hindi"
+              onKeyDown={handleNameKeyDown}
+              ref={nameInputRef}
+            />
+            {showNameSuggestions && nameSuggestions.length > 0 && (
+              <div className="absolute z-10 w-full mt-1 bg-white border border-accent-light rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                {nameSuggestions.map((suggestion, index) => (
+                  <div
+                    key={index}
+                    className={`px-4 py-2 hover:bg-primary-light/10 cursor-pointer ${
+                      index === highlightedIndex ? 'bg-primary-light/20' : ''
+                    }`}
+                    onMouseDown={() => {
+                      setCustomerName(suggestion);
+                      setShowNameSuggestions(false);
+                      setHighlightedIndex(-1);
+                    }}
+                  >
+                    {suggestion}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+          <div>
+            <label className="block text-primary-dark font-semibold mb-1">
+              मोबाइल नंबर
+            </label>
+            <input
+              type="text"
+              value={customerMobile}
+              onChange={(e) => setCustomerMobile(e.target.value)}
+              className="w-full px-4 py-2 bg-gray-200 border border-accent-light rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+              placeholder="मोबाइल नंबर दर्ज करें"
+              maxLength={10}
+            />
+          </div>
+        </div>
+
+        {/* Delivery Date and Time */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+          <div>
+            <label className="block text-primary-dark font-semibold mb-1">
+              डिलीवरी की तारीख
+            </label>
+            <DatePicker
+              selected={deliveryDate}
+              onChange={(date) => setDeliveryDate(date)}
+              dateFormat="dd.MM.yyyy"
+              className="w-full px-4 py-2 bg-gray-200 border border-accent-light rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+            />
+          </div>
+          <div>
+            <label className="block text-primary-dark font-semibold mb-1">
+              डिलीवरी का समय
+            </label>
+            <select
+              value={deliveryTimeHindi}
+              onChange={handleDeliveryTimeChange}
+              className="w-full px-4 py-2 bg-gray-200 border border-accent-light rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+            >
+              <option value="सुबह">सुबह</option>
+              <option value="दोपहर">दोपहर</option>
+              <option value="शाम">शाम</option>
+            </select>
+          </div>
+        </div>
+
+        {/* Product Search and Add Section */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 items-end relative">
+          <div>
+            <label className="block text-primary-dark font-semibold mb-1">
+              उत्पाद खोजें
+            </label>
             <div className="relative">
-              <label className="block text-sm font-semibold text-gray-700 mb-1">
-                ग्राहक का नाम (हिन्दी)
-              </label>
               <input
                 type="text"
-                value={customerName}
-                onChange={(e) => {
-                  setCustomerName(e.target.value);
-                  setShowNameSuggestions(true);
-                  setHighlightedIndex(-1); // Reset index when input changes
-                }}
-                onFocus={() => setShowNameSuggestions(true)}
-                onBlur={() => setTimeout(() => setShowNameSuggestions(false), 200)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
-                placeholder="Enter customer name in English or Hindi"
-                onKeyDown={handleNameKeyDown}
-                ref={nameInputRef} // Attach the ref
+                value={searchTerm}
+                onChange={handleSearch}
+                onKeyDown={handleKeyDown}
+                ref={searchInputRef}
+                className="w-full px-4 py-2 bg-gray-200 border border-accent-light rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                placeholder="उत्पाद का नाम दर्ज करें..."
               />
-              {showNameSuggestions && nameSuggestions.length > 0 && (
-                <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-48 overflow-y-auto">
-                  {nameSuggestions.map((suggestion, index) => (
+              {searchTerm && filteredItems.length > 0 && (
+                <div className="absolute z-20 w-full mt-1 bg-white border border-accent-light rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                  {filteredItems.map((item, idx) => (
                     <div
-                      key={index}
-                      className={`px-4 py-2 hover:bg-blue-100 cursor-pointer ${
-                        index === highlightedIndex ? 'bg-blue-200' : ''
+                      key={item.id}
+                      className={`p-2 cursor-pointer text-primary-dark ${
+                        idx === highlightedIndex ? 'bg-primary-light/20' : 'hover:bg-primary-light/10'
                       }`}
-                      onMouseDown={() => {
-                        setCustomerName(suggestion);
-                        setShowNameSuggestions(false);
-                        setHighlightedIndex(-1);
-                      }}
+                      onMouseEnter={() => setHighlightedIndex(idx)}
+                      onMouseDown={() => handleRecommendationClick(item, idx)}
                     >
-                      {suggestion}
+                      {item.hindiName} ({item.name})
                     </div>
                   ))}
                 </div>
               )}
             </div>
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1">
-                मोबाइल नंबर
-              </label>
-              <input
-                type="text"
-                value={customerMobile}
-                onChange={(e) => setCustomerMobile(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
-                placeholder="मोबाइल नंबर दर्ज करें"
-                maxLength={10}
-              />
-            </div>
           </div>
-
-          {/* Delivery Date and Time */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1">
-                डिलीवरी की तारीख
-              </label>
-              <DatePicker
-                selected={deliveryDate}
-                onChange={(date) => setDeliveryDate(date)}
-                dateFormat="dd.MM.yyyy"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1">
-                डिलीवरी का समय
+          <div>
+            <label className="block text-primary-dark font-semibold mb-1">
+              मात्रा
+            </label>
+            <input
+              type="number"
+              value={quantity}
+              onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
+              className="w-full px-4 py-2 bg-gray-200 border border-accent-light rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+              min="1"
+            />
+          </div>
+          <div className="flex gap-2 items-end">
+            <div className="flex-1">
+              <label className="block text-primary-dark font-semibold mb-1">
+                इकाई
               </label>
               <select
-                value={deliveryTimeHindi}
-                onChange={handleDeliveryTimeChange}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
+                value={selectedUnit}
+                onChange={(e) => setSelectedUnit(e.target.value)}
+                className="w-full px-4 py-2 bg-gray-200 border border-accent-light rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
               >
-                <option value="सुबह">सुबह</option>
-                <option value="दोपहर">दोपहर</option>
-                <option value="शाम">शाम</option>
+                <option value="किग्रा">कि.ग्रा.</option>
+                <option value="ग्राम">ग्राम</option>
+                <option value="पीपा">पीपा</option>
+                <option value="गड्डी">गड्डी</option>
+                <option value="पैकेट">पैकेट</option>
+                <option value=" ">None</option>
               </select>
             </div>
+            <button
+              type="button"
+              onClick={handleAddToCart}
+              className="px-6 py-2 bg-primary hover:bg-primary-dark text-white rounded-lg font-semibold shadow transition disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={!selectedItem}
+            >
+              उत्पाद जोड़ें
+            </button>
+          </div>
+        </div>
+
+        {/* Bill Area */}
+        <div
+          ref={billRef}
+          className="bg-white p-6 border border-gray-800 rounded-lg shadow-sm mb-8"
+          style={{
+            fontFamily: 'DejaVu Sans, Arial, sans-serif',
+            color: '#222',
+            width: '100%',
+            maxWidth: 700,
+            margin: '0 auto',
+          }}
+        >
+          <div className="text-center font-bold text-lg mb-2 text-gray-900">! श्री राम जी !!</div>
+          <div className="text-center text-sm mb-4 text-gray-900">
+            {`दिनांक ${formattedDeliveryDateBill} को ${hindiDeliveryTimeBill} तक देना है।`}
+          </div>
+          <div className="flex justify-between text-sm mb-4 text-gray-900">
+            <span>नाम: {customerName || ''}</span>
+            <span>मो. नं. {customerMobile || ''}</span>
           </div>
 
-          {/* Product Search and Add Section */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 items-end relative">
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1">
-                उत्पाद खोजें
-              </label>
-              <div className="relative">
-                <input
-                  type="text"
-                  value={searchTerm}
-                  onChange={handleSearch}
-                  onKeyDown={handleKeyDown}
-                  ref={searchInputRef}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
-                  placeholder="उत्पाद का नाम दर्ज करें..."
-                />
-                {searchTerm && filteredItems.length > 0 && (
-                  <div className="absolute z-20 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-48 overflow-y-auto">
-                    {filteredItems.map((item, idx) => (
-                      <div
-                        key={item.id}
-                        className={`p-2 cursor-pointer text-gray-800 ${
-                          idx === highlightedIndex ? 'bg-blue-200' : 'hover:bg-blue-100'
-                        }`}
-                        onMouseEnter={() => setHighlightedIndex(idx)}
-                        onMouseDown={() => handleRecommendationClick(item, idx)}
-                      >
-                        {item.hindiName} ({item.name})
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1">
-                मात्रा
-              </label>
-              <input
-                type="number"
-                value={quantity}
-                onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
-                min="1"
-              />
-            </div>
-            <div className="flex gap-2 items-end">
-              <div className="flex-1">
-                <label className="block text-sm font-semibold text-gray-700 mb-1">
-                  इकाई
-                </label>
-                <select
-                  value={selectedUnit}
-                  onChange={(e) => setSelectedUnit(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
-                >
-                  <option value="किग्रा">कि.ग्रा.</option>
-                  <option value="ग्राम">ग्राम</option>
-                  <option value="पीपा">पीपा</option>
-                  <option value="गड्डी">गड्डी</option>
-                  <option value="पैकेट">पैकेट</option>
-                  <option value=" ">None</option>
-                </select>
-              </div>
-              <button
-                type="button"
-                onClick={handleAddToCart}
-                className="px-6 py-2 bg-blue-600 text-white rounded-lg font-semibold shadow hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
-                disabled={!selectedItem}
-              >
-                उत्पाद जोड़ें
-              </button>
-            </div>
-          </div>
-
-          {/* Bill Area */}
-          <div
-            ref={billRef}
-            className="bg-white p-6 border border-gray-300 rounded-lg shadow-sm mb-8"
-            style={{
-              fontFamily: 'DejaVu Sans, Arial, sans-serif',
-              color: '#222',
-              width: '100%',
-              maxWidth: 700,
-              margin: '0 auto',
-            }}
-          >
-            <div className="text-center font-bold text-lg mb-2">! श्री राम जी !!</div>
-            <div className="text-center text-sm mb-4">
-              {`दिनांक ${formattedDeliveryDateBill} को ${hindiDeliveryTimeBill} तक देना है।`}
-            </div>
-            <div className="flex justify-between text-sm mb-4">
-              <span>नाम: {customerName || ''}</span>
-              <span>मो. नं. {customerMobile || ''}</span>
-            </div>
-
-            {/* <div className="text-sm mb-2">
-              डिलीवरी: {formattedDeliveryDateBill}, {hindiDeliveryTimeBill}
-            </div> */}
-
-            <table className="w-full border-collapse text-sm">
-              <thead>
-                <tr>
-                  <th className="border border-gray-300 p-2 w-1/4 text-center">
-                    उत्पाद (हिन्दी)
-                  </th>
-                  <th className="border border-gray-300 p-2 w-1/6 text-center">
-                    मात्रा
-                  </th>
-                  <th className="border border-gray-300 p-2 w-1/12"></th>
-                  <th className="border border-gray-300 p-2 w-1/4 text-center">
-                    उत्पाद (हिन्दी)
-                  </th>
-                  <th className="border border-gray-300 p-2 w-1/6 text-center">
-                    मात्रा
-                  </th>
-                  <th className="border border-gray-300 p-2 w-1/12"></th>
+          <table className="w-full border-collapse text-sm">
+            <thead>
+              <tr>
+                <th className="border border-gray-800 p-2 w-1/4 text-center text-gray-900">
+                  उत्पाद (हिन्दी)
+                </th>
+                <th className="border border-gray-800 p-2 w-1/6 text-center text-gray-900">
+                  मात्रा
+                </th>
+                <th className="border border-gray-800 p-2 w-1/12"></th>
+                <th className="border border-gray-800 p-2 w-1/4 text-center text-gray-900">
+                  उत्पाद (हिन्दी)
+                </th>
+                <th className="border border-gray-800 p-2 w-1/6 text-center text-gray-900">
+                  मात्रा
+                </th>
+                <th className="border border-gray-800 p-2 w-1/12"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {generateTwoColumnTable(cart).map((row, idx) => (
+                <tr key={idx}>
+                  <td className="border border-gray-800 p-2 text-center text-gray-900">{row[0]}</td>
+                  <td className="border border-gray-800 p-2 text-center text-gray-900">{row[1]}</td>
+                  <td className="border border-gray-800 p-2"></td>
+                  <td className="border border-gray-800 p-2 text-center text-gray-900">{row[3]}</td>
+                  <td className="border border-gray-800 p-2 text-center text-gray-900">{row[4]}</td>
+                  <td className="border border-gray-800 p-2"></td>
                 </tr>
-              </thead>
-              <tbody>
-                {generateTwoColumnTable(cart).map((row, idx) => (
-                  <tr key={idx}>
-                    <td className="border border-gray-300 p-2 text-center">{row[0]}</td>
-                    <td className="border border-gray-300 p-2 text-center">{row[1]}</td>
-                    <td className="border border-gray-300 p-2"></td>
-                    <td className="border border-gray-300 p-2 text-center">{row[3]}</td>
-                    <td className="border border-gray-300 p-2 text-center">{row[4]}</td>
-                    <td className="border border-gray-300 p-2"></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+              ))}
+            </tbody>
+          </table>
+        </div>
 
-          {/* Export Buttons */}
-          <div className="flex flex-col mt-5 sm:flex-row gap-4 justify-end">
-            <button
-              className="px-6 py-2 bg-green-600 text-white rounded-lg font-semibold shadow hover:bg-green-700 transition flex-1 sm:flex-none"
-              onClick={handleExportExcel}
-            >
-              Export as Excel
-            </button>
-            <button
-              className="px-6 py-2 bg-red-600 text-white rounded-lg font-semibold shadow hover:bg-red-700 transition flex-1 sm:flex-none"
-              onClick={handleExportPDF}
-            >
-              Export as PDF
-            </button>
-          </div>
+        {/* Export Buttons */}
+        <div className="flex flex-col mt-5 sm:flex-row gap-4 justify-end">
+          <button
+            className="px-6 py-2 bg-primary hover:bg-primary-dark text-white rounded-lg font-semibold shadow transition flex-1 sm:flex-none"
+            onClick={handleExportExcel}
+          >
+            Export as Excel
+          </button>
+          <button
+            className="px-6 py-2 bg-primary hover:bg-primary-dark text-white rounded-lg font-semibold shadow transition flex-1 sm:flex-none"
+            onClick={handleExportPDF}
+          >
+            Export as PDF
+          </button>
         </div>
       </div>
     </div>
