@@ -9,17 +9,31 @@ const DUMMY_USER = {
 export default function LandingPage({ setIsLoggedIn, setEmployeeName }) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
+  const [errors, setErrors] = useState({});
   const navigate = useNavigate();
+
+  const validateForm = () => {
+    const newErrors = {};
+    if (!username.trim()) {
+      newErrors.username = 'Username is required';
+    }
+    if (!password.trim()) {
+      newErrors.password = 'Password is required';
+    }
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    if (!validateForm()) return;
+
     if (username === DUMMY_USER.username && password === DUMMY_USER.password) {
       setIsLoggedIn(true);
       setEmployeeName(username);
       navigate('/admin');
     } else {
-      setError('Invalid username or password');
+      setErrors({ auth: 'Invalid username or password' });
     }
   };
 
@@ -33,22 +47,38 @@ export default function LandingPage({ setIsLoggedIn, setEmployeeName }) {
             <label className="block text-primary-dark font-semibold mb-1">Username</label>
             <input
               type="text"
-              className="w-full bg-gray-200 px-4 py-2 border border-accent-light rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+              className={`w-full bg-gray-200 px-4 py-2 border ${
+                errors.username ? 'border-red-500' : 'border-accent-light'
+              } rounded-lg focus:outline-none focus:ring-2 focus:ring-primary`}
               value={username}
-              onChange={e => setUsername(e.target.value)}
+              onChange={e => {
+                setUsername(e.target.value);
+                if (errors.username) {
+                  setErrors(prev => ({ ...prev, username: '' }));
+                }
+              }}
               autoFocus
             />
+            {errors.username && <p className="text-red-500 text-sm mt-1">{errors.username}</p>}
           </div>
           <div>
             <label className="block text-primary-dark font-semibold mb-1">Password</label>
             <input
               type="password"
-              className="w-full px-4 py-2 bg-gray-200 border border-accent-light rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+              className={`w-full px-4 py-2 bg-gray-200 border ${
+                errors.password ? 'border-red-500' : 'border-accent-light'
+              } rounded-lg focus:outline-none focus:ring-2 focus:ring-primary`}
               value={password}
-              onChange={e => setPassword(e.target.value)}
+              onChange={e => {
+                setPassword(e.target.value);
+                if (errors.password) {
+                  setErrors(prev => ({ ...prev, password: '' }));
+                }
+              }}
             />
+            {errors.password && <p className="text-red-500 text-sm mt-1">{errors.password}</p>}
           </div>
-          {error && <div className="text-red-600 text-sm text-center">{error}</div>}
+          {errors.auth && <div className="text-red-600 text-sm text-center">{errors.auth}</div>}
           <button
             type="submit"
             className="w-full bg-primary hover:bg-primary-dark text-white font-bold py-2 px-4 rounded-lg transition-colors"
