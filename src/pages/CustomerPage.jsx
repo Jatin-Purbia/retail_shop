@@ -53,21 +53,6 @@ const hindiKeyboardLayout = {
     ],
 };
 
-// Mock function for a hypothetical phonetic transliteration API (can be replaced)
-async function getPhoneticHindi(englishText) {
-    // Replace with a real transliteration API call if available
-    const transliterationMap = {
-        lucky: 'लकी',
-        sun: 'सन',
-        fan: 'फैन',
-        pen: 'पेन',
-        // Add more mappings or integrate with an API
-    };
-    return transliterationMap[englishText.toLowerCase()] || null;
-}
-
-const isHindi = (text) => /[\u0900-\u097F]/.test(text);
-
 function CustomerPage() {
     const [searchTerm, setSearchTerm] = useState('');
     const [quantity, setQuantity] = useState(1);
@@ -84,11 +69,7 @@ function CustomerPage() {
     const [deliveryDate, setDeliveryDate] = useState(new Date());
     const [deliveryTimeHindi, setDeliveryTimeHindi] = useState('सुबह');
     const nameInputRef = useRef(null);
-    const [showCustomerKeyboard, setShowCustomerKeyboard] = useState(false);
-    const [showSearchKeyboard, setShowSearchKeyboard] = useState(false);
-    const [keyboardInput, setKeyboardInput] = useState('');
-    const [currentInputTarget, setCurrentInputTarget] = useState(null);
-
+   
     const billRef = useRef();
 
     // Function to transliterate English to Hindi using Google Input Tools API
@@ -106,7 +87,6 @@ function CustomerPage() {
             if (data && data[1] && data[1][0] && data[1][0][1]) {
                 const suggestions = data[1][0][1];
                 setNameSuggestions(suggestions);
-                // Automatically set the first suggestion as the customer name
                 if (suggestions.length > 0) {
                     setCustomerName(suggestions[0]);
                 }
@@ -140,6 +120,72 @@ function CustomerPage() {
         setSelectedItem(null);
     };
 
+    const handleNameKeyDown = (e) => {
+        if (!nameSuggestions.length) return;
+
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            setHighlightedIndex((prev) => {
+                const next = (prev + 1) % nameSuggestions.length;
+                return next;
+            });
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            setHighlightedIndex((prev) => {
+                const next = (prev - 1 + nameSuggestions.length) % nameSuggestions.length;
+                return next;
+            });
+        } else if (e.key === 'Enter') {
+            e.preventDefault();
+            if (highlightedIndex >= 0) {
+                const selectedName = nameSuggestions[highlightedIndex];
+                setCustomerName(selectedName);
+                setShowNameSuggestions(false);
+                setHighlightedIndex(-1);
+                if (nameInputRef.current) {
+                    nameInputRef.current.blur();
+                }
+            }
+        } else if (e.key === 'Escape') {
+            e.preventDefault();
+            setShowNameSuggestions(false);
+            setHighlightedIndex(-1);
+        }
+    };
+
+    const handleSearchKeyDown = (e) => {
+        if (!filteredItems.length) return;
+
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            setHighlightedIndex((prev) => {
+                const next = (prev + 1) % filteredItems.length;
+                setSelectedItem(filteredItems[next]);
+                return next;
+            });
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            setHighlightedIndex((prev) => {
+                const next = (prev - 1 + filteredItems.length) % filteredItems.length;
+                setSelectedItem(filteredItems[next]);
+                return next;
+            });
+        } else if (e.key === 'Enter') {
+            e.preventDefault();
+            if (highlightedIndex >= 0) {
+                const selected = filteredItems[highlightedIndex];
+                setSelectedItem(selected);
+                setSearchTerm(selected.hindiName + ' (' + selected.name + ')');
+                setFilteredItems([]);
+                setHighlightedIndex(-1);
+            }
+        } else if (e.key === 'Escape') {
+            e.preventDefault();
+            setFilteredItems([]);
+            setHighlightedIndex(-1);
+        }
+    };
+
     const handleAddToCart = () => {
         if (!selectedItem) return;
 
@@ -170,43 +216,6 @@ function CustomerPage() {
         setHighlightedIndex(-1);
         setSelectedItem(null);
         if (searchInputRef.current) searchInputRef.current.focus();
-        setShowSearchKeyboard(false);
-    };
-
-    const handleKeyDown = (e) => {
-        if (!filteredItems.length) return;
-        if (e.key === 'ArrowDown') {
-            e.preventDefault();
-            setHighlightedIndex((prev) => {
-                const next = (prev + 1) % filteredItems.length;
-                setSelectedItem(filteredItems[next]);
-                return next;
-            });
-        } else if (e.key === 'ArrowUp') {
-            e.preventDefault();
-            setHighlightedIndex((prev) => {
-                const next = (prev - 1 + filteredItems.length) % filteredItems.length;
-                setSelectedItem(filteredItems[next]);
-                return next;
-            });
-        } else if (e.key === 'Enter') {
-            e.preventDefault();
-            if (highlightedIndex >= 0) {
-                const selected = filteredItems[highlightedIndex];
-                setSelectedItem(selected);
-                setSearchTerm(selected.hindiName + ' (' + selected.name + ')');
-                setFilteredItems([]);
-                setShowSearchKeyboard(false);
-            }
-        }
-    };
-
-    const handleRecommendationClick = (item, idx) => {
-        setHighlightedIndex(idx);
-        setSelectedItem(item);
-        setSearchTerm(item.hindiName + ' (' + item.name + ')');
-        setFilteredItems([]);
-        setShowSearchKeyboard(false);
     };
 
     const handleDeliveryTimeChange = (event) => {
@@ -276,36 +285,6 @@ function CustomerPage() {
     const timeMappingBill = { सुबह: 'सुबह', दोपहर: 'दोपहर', शाम: 'शाम' };
     const hindiDeliveryTimeBill = timeMappingBill[deliveryTimeHindi] || '';
 
-    const handleKeyboardChange = (input) => {
-        setKeyboardInput(input);
-        if (currentInputTarget === 'customerName') {
-            setCustomerName(input);
-        } else if (currentInputTarget === 'searchTerm') {
-            setSearchTerm(input);
-            handleSearch({ target: { value: input } });
-        }
-    };
-
-    const handleInputFocus = (target) => {
-        setCurrentInputTarget(target);
-        setKeyboardInput(target === 'customerName' ? customerName : searchTerm);
-        if (target === 'customerName') {
-            setShowCustomerKeyboard(true);
-            setShowSearchKeyboard(false);
-        } else if (target === 'searchTerm') {
-            setShowSearchKeyboard(true);
-            setShowCustomerKeyboard(false);
-        }
-    };
-
-    const handleInputBlur = () => {
-        setTimeout(() => {
-            setShowCustomerKeyboard(false);
-            setShowSearchKeyboard(false);
-            setCurrentInputTarget(null);
-        }, 200);
-    };
-
     return (
         <div className="flex flex-col p-2 items-center justify-center min-h-screen bg-primary-light overflow-hidden">
             <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-4xl">
@@ -323,6 +302,7 @@ function CustomerPage() {
                             onChange={(e) => setCustomerName(e.target.value)}
                             onFocus={() => setShowNameSuggestions(true)}
                             onBlur={() => setTimeout(() => setShowNameSuggestions(false), 200)}
+                            onKeyDown={handleNameKeyDown}
                             className="w-full px-4 py-2 bg-gray-200 border border-accent-light rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                             placeholder="Type name in English (e.g., 'Rahul')"
                             ref={nameInputRef}
@@ -335,6 +315,7 @@ function CustomerPage() {
                                         className={`px-4 py-2 hover:bg-primary-light/10 cursor-pointer ${
                                             index === highlightedIndex ? 'bg-primary-light/20' : ''
                                         }`}
+                                        onMouseEnter={() => setHighlightedIndex(index)}
                                         onMouseDown={() => {
                                             setCustomerName(suggestion);
                                             setShowNameSuggestions(false);
@@ -346,26 +327,7 @@ function CustomerPage() {
                                 ))}
                             </div>
                         )}
-                        {showCustomerKeyboard && (
-                            <div className="fixed bottom-0 left-0 right-0 z-50 bg-white shadow-lg border-t border-gray-200">
-                                <ReactSimpleKeyboard
-                                    layout={hindiKeyboardLayout}
-                                    onChange={handleKeyboardChange}
-                                    inputName={'customerName'}
-                                    initialInput={customerName}
-                                    display={{
-                                        '{bksp}': '⌫',
-                                        '{enter}': '↵',
-                                        '{shift}': '⇧',
-                                        '{space}': 'Space'
-                                    }}
-                                    theme="hg-theme-default hg-layout-default"
-                                    buttonAttributes={{
-                                        className: 'custom-keyboard-button'
-                                    }}
-                                />
-                            </div>
-                        )}
+                        
                     </div>
                     <div>
                         <label className="block text-primary-dark font-semibold mb-1">
@@ -420,12 +382,10 @@ function CustomerPage() {
                                 type="text"
                                 value={searchTerm}
                                 onChange={handleSearch}
-                                onKeyDown={handleKeyDown}
-                                onFocus={() => handleInputFocus('searchTerm')}
-                                onBlur={handleInputBlur}
+                                onKeyDown={handleSearchKeyDown}
                                 ref={searchInputRef}
                                 className="w-full px-4 py-2 bg-gray-200 border border-accent-light rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                                placeholder="उत्पाद का नाम दर्ज करें..."
+                                placeholder="Search products in English or Hindi..."
                             />
                             {searchTerm && filteredItems.length > 0 && (
                                 <div className="absolute z-20 w-full mt-1 bg-white border border-accent-light rounded-lg shadow-lg max-h-48 overflow-y-auto">
@@ -435,32 +395,20 @@ function CustomerPage() {
                                             className={`p-2 cursor-pointer text-primary-dark ${
                                                 idx === highlightedIndex ? 'bg-primary-light/20' : 'hover:bg-primary-light/10'
                                             }`}
-                                            onMouseEnter={() => setHighlightedIndex(idx)}
-                                            onMouseDown={() => handleRecommendationClick(item, idx)}
+                                            onMouseEnter={() => {
+                                                setHighlightedIndex(idx);
+                                                setSelectedItem(item);
+                                            }}
+                                            onMouseDown={() => {
+                                                setSelectedItem(item);
+                                                setSearchTerm(item.hindiName + ' (' + item.name + ')');
+                                                setFilteredItems([]);
+                                                setHighlightedIndex(-1);
+                                            }}
                                         >
                                             {item.hindiName} ({item.name})
                                         </div>
                                     ))}
-                                </div>
-                            )}
-                            {showSearchKeyboard && (
-                                <div className="fixed bottom-0 left-0 right-0 z-50 bg-white shadow-lg border-t border-gray-200">
-                                    <ReactSimpleKeyboard
-                                        layout={hindiKeyboardLayout}
-                                        onChange={handleKeyboardChange}
-                                        inputName={'searchTerm'}
-                                        initialInput={searchTerm}
-                                        display={{
-                                            '{bksp}': '⌫',
-                                            '{enter}': '↵',
-                                            '{shift}': '⇧',
-                                            '{space}': 'Space'
-                                        }}
-                                        theme="hg-theme-default hg-layout-default"
-                                        buttonAttributes={{
-                                            className: 'custom-keyboard-button'
-                                        }}
-                                    />
                                 </div>
                             )}
                         </div>
