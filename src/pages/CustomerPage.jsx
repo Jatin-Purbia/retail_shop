@@ -2,10 +2,11 @@ import React, { useState, useRef, useEffect } from 'react';
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
-import inventory from '../inventoryData';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import 'react-simple-keyboard/build/css/index.css';
+
+const API_URL = 'http://localhost:5000/api';
 
 // Helper to format date as DD.MM.YYYY
 function formatDate(date = new Date()) {
@@ -19,17 +20,16 @@ function generateTwoColumnTable(cart) {
         const left = cart[i];
         const right = cart[i + 1];
         rows.push([
-            left ? left.hindiName : '',
+            left ? left.name : '', // Changed to English name
             left ? `${left.quantity} ${left.unit}` : '',
             '', // Blank column
-            right ? right.hindiName : '',
+            right ? right.name : '', // Changed to English name
             right ? `${right.quantity} ${right.unit}` : '',
             '', // Blank column
         ]);
     }
     return rows;
 }
-
 
 function CustomerPage() {
     const [searchTerm, setSearchTerm] = useState('');
@@ -47,8 +47,8 @@ function CustomerPage() {
     const [deliveryDate, setDeliveryDate] = useState(new Date());
     const [deliveryTimeHindi, setDeliveryTimeHindi] = useState('सुबह');
     const nameInputRef = useRef(null);
-   
     const billRef = useRef();
+    const [isSearching, setIsSearching] = useState(false);
 
     // Function to transliterate English to Hindi using Google Input Tools API
     const transliterateToHindi = async (text) => {
@@ -78,25 +78,60 @@ function CustomerPage() {
     useEffect(() => {
         const timer = setTimeout(() => {
             if (customerName && /[a-zA-Z]/.test(customerName)) {
-                transliterateToHindi(customerName);
+                // transliterateToHindi(customerName); // Commented out
             }
         }, 300);
 
         return () => clearTimeout(timer);
     }, [customerName]);
 
+    // Debounced search function
+    const debouncedSearch = async (value) => {
+        if (!value) {
+            setFilteredItems([]);
+            return;
+        }
+
+        setIsSearching(true);
+        try {
+            const response = await fetch(`${API_URL}/inventory/search?q=${encodeURIComponent(value)}`);
+            if (!response.ok) throw new Error('Failed to search items');
+            const data = await response.json();
+            setFilteredItems(data);
+            setHighlightedIndex(data.length > 0 ? 0 : -1);
+        } catch (error) {
+            console.error('Search error:', error);
+            setFilteredItems([]);
+        } finally {
+            setIsSearching(false);
+        }
+    };
+
     const handleSearch = (e) => {
         const value = e.target.value;
         setSearchTerm(value);
-        const filtered = inventory.filter(
-            (item) =>
-                item.name.toLowerCase().includes(value.toLowerCase()) ||
-                item.hindiName.includes(value)
-        );
-        setFilteredItems(filtered);
-        setHighlightedIndex(filtered.length > 0 ? 0 : -1);
-        setSelectedItem(null);
+        
+        // Clear the timeout if it exists
+        if (searchTimeoutRef.current) {
+            clearTimeout(searchTimeoutRef.current);
+        }
+
+        // Set a new timeout
+        searchTimeoutRef.current = setTimeout(() => {
+            debouncedSearch(value);
+        }, 300);
     };
+
+    const searchTimeoutRef = useRef(null);
+
+    // Cleanup timeout on unmount
+    useEffect(() => {
+        return () => {
+            if (searchTimeoutRef.current) {
+                clearTimeout(searchTimeoutRef.current);
+            }
+        };
+    }, []);
 
     const handleNameKeyDown = (e) => {
         if (!nameSuggestions.length) return;
@@ -153,7 +188,7 @@ function CustomerPage() {
             if (highlightedIndex >= 0) {
                 const selected = filteredItems[highlightedIndex];
                 setSelectedItem(selected);
-                setSearchTerm(selected.hindiName + ' (' + selected.name + ')');
+                setSearchTerm(selected.name); // Changed to English name
                 setFilteredItems([]);
                 setHighlightedIndex(-1);
             }
@@ -241,7 +276,7 @@ function CustomerPage() {
             [`नाम: ${customerName || ''}`, '', '', `मो. नं. ${customerMobile || ''}`, '', '', '', ''],
             [`डिलीवरी: ${formattedDeliveryDate}, ${englishDeliveryTime}`, '', '', '', '', ''],
             ['', '', '', '', '', ''],
-            ['उत्पाद (हिन्दी)', 'मात्रा', '', 'उत्पाद (हिन्दी)', 'मात्रा', ''],
+            ['उत्पाद', 'मात्रा', '', 'उत्पाद', 'मात्रा', ''], // Changed to English
             ...generateTwoColumnTable(cart),
         ];
         const ws = XLSX.utils.aoa_to_sheet(wsData);
@@ -285,7 +320,7 @@ function CustomerPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                     <div className="relative">
                         <label className="block text-base text-primary-dark font-semibold mb-1">
-                            ग्राहक का नाम (हिन्दी)
+                            ग्राहक का नाम
                         </label>
                         <input
                             type="text"
@@ -376,7 +411,12 @@ function CustomerPage() {
                                 className="w-full px-3 py-2 text-base bg-gray-200 border border-accent-light rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                                 placeholder="Search products in English or Hindi..."
                             />
-                            {searchTerm && filteredItems.length > 0 && (
+                            {isSearching && (
+                                <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary"></div>
+                                </div>
+                            )}
+                            {searchTerm && filteredItems.length > 0 && !isSearching && (
                                 <div className="absolute z-20 w-full mt-1 bg-white border border-accent-light rounded-lg shadow-lg max-h-32 overflow-y-auto">
                                     {filteredItems.map((item, idx) => (
                                         <div
@@ -390,12 +430,12 @@ function CustomerPage() {
                                             }}
                                             onMouseDown={() => {
                                                 setSelectedItem(item);
-                                                setSearchTerm(item.hindiName + ' (' + item.name + ')');
+                                                setSearchTerm(item.name); // Changed to English name
                                                 setFilteredItems([]);
                                                 setHighlightedIndex(-1);
                                             }}
                                         >
-                                            {item.hindiName} ({item.name})
+                                            {item.name}
                                         </div>
                                     ))}
                                 </div>
@@ -424,7 +464,7 @@ function CustomerPage() {
                                 onChange={(e) => setSelectedUnit(e.target.value)}
                                 className="w-full px-3 py-2 text-base bg-gray-200 border border-accent-light rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                             >
-                                <option value="किग्रा">कि.ग्रा.</option>
+                                 <option value="किग्रा">कि.ग्रा.</option>
                                 <option value="ग्राम">ग्राम</option>
                                 <option value="पीपा">पीपा</option>
                                 <option value="गड्डी">गड्डी</option>
@@ -477,14 +517,14 @@ function CustomerPage() {
                             <thead className="sticky top-0 bg-white">
                                 <tr>
                                     <th className="border border-gray-800 p-2 w-1/4 text-center text-gray-900 font-bold">
-                                        उत्पाद (हिन्दी)
+                                        उत्पाद
                                     </th>
                                     <th className="border border-gray-800 p-2 w-1/6 text-center text-gray-900 font-bold">
                                         मात्रा
                                     </th>
                                     <th className="border border-gray-800 p-2 w-1/12"></th>
                                     <th className="border border-gray-800 p-2 w-1/4 text-center text-gray-900 font-bold">
-                                        उत्पाद (हिन्दी)
+                                        उत्पाद
                                     </th>
                                     <th className="border border-gray-800 p-2 w-1/6 text-center text-gray-900 font-bold">
                                         मात्रा
@@ -528,3 +568,4 @@ function CustomerPage() {
 }
 
 export default CustomerPage;
+

@@ -56,6 +56,30 @@ app.get('/api/inventory', (req, res) => {
   });
 });
 
+// Search items
+app.get('/api/inventory/search', (req, res) => {
+  const { q } = req.query;
+  if (!q) {
+    res.json([]);
+    return;
+  }
+
+  const searchQuery = `
+    SELECT * FROM inventory 
+    WHERE name LIKE ? OR hindiName LIKE ?
+    LIMIT 10
+  `;
+  const searchTerm = `%${q}%`;
+  
+  db.query(searchQuery, [searchTerm, searchTerm], (err, results) => {
+    if (err) {
+      res.status(500).json({ error: err.message });
+      return;
+    }
+    res.json(results);
+  });
+});
+
 // Add new item
 app.post('/api/inventory', (req, res) => {
   const { name, hindiName, unit } = req.body;
