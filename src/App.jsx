@@ -1,18 +1,19 @@
 import {
-  BrowserRouter as Router,
+  BrowserRouter,
   Routes,
   Route,
   Link,
+  Outlet,
   useLocation,
 } from 'react-router-dom';
 import AdminPage from './pages/AdminPage';
 import CustomerPage from './pages/CustomerPage';
 import LandingPage from './pages/LandingPage';
 import './index.css';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 
 // Layout with Navbar
-function LayoutWithNavbar({ children }) {
+function LayoutWithNavbar() {
   const location = useLocation();
   const isAdminActive = location.pathname === '/admin';
   const isCustomerActive = location.pathname === '/customer';
@@ -50,29 +51,10 @@ function LayoutWithNavbar({ children }) {
           </div>
         </div>
       </nav>
-
-      <main className="mx-auto py-4 px-4">{children}</main>
+      <main className="mx-auto py-4 px-4">
+        <Outlet />
+      </main>
     </div>
-  );
-}
-
-// AppContent for conditional rendering
-function AppContent({ setIsLoggedIn, setEmployeeName }) {
-  const location = useLocation();
-  const isLanding = location.pathname === '/';
-
-  return isLanding ? (
-    <LandingPage
-      setIsLoggedIn={setIsLoggedIn}
-      setEmployeeName={setEmployeeName}
-    />
-  ) : (
-    <LayoutWithNavbar>
-      <Routes>
-        <Route path="/admin" element={<AdminPage />} />
-        <Route path="/customer" element={<CustomerPage />} />
-      </Routes>
-    </LayoutWithNavbar>
   );
 }
 
@@ -82,19 +64,23 @@ function App() {
   const [employeeName, setEmployeeName] = useState('');
 
   return (
-    <Router>
+    <BrowserRouter>
       <Routes>
         <Route
-          path="*"
+          path="/"
           element={
-            <AppContent
+            <LandingPage
               setIsLoggedIn={setIsLoggedIn}
               setEmployeeName={setEmployeeName}
             />
           }
         />
+        <Route element={<LayoutWithNavbar />}>
+          <Route path="/admin" element={<AdminPage />} />
+          <Route path="/customer" element={<CustomerPage />} />
+        </Route>
       </Routes>
-    </Router>
+    </BrowserRouter>
   );
 }
 
