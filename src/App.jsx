@@ -6,7 +6,7 @@ import {
   Outlet,
   useLocation,
 } from 'react-router-dom';
-import AdminPage from './pages/AdminPage';
+import Admin from './pages/Admin';
 import CustomerPage from './pages/CustomerPage';
 import LandingPage from './pages/LandingPage';
 import './index.css';
@@ -76,7 +76,7 @@ function App() {
           }
         />
         <Route element={<LayoutWithNavbar />}>
-          <Route path="/admin" element={<AdminPage />} />
+          <Route path="/admin" element={<Admin />} />
           <Route path="/customer" element={<CustomerPage />} />
         </Route>
       </Routes>
