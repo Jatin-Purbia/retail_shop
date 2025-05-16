@@ -5,7 +5,6 @@ import html2canvas from 'html2canvas';
 import inventory from '../inventoryData';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
-import ReactSimpleKeyboard from 'react-simple-keyboard';
 import 'react-simple-keyboard/build/css/index.css';
 
 // Helper to format date as DD.MM.YYYY
@@ -31,27 +30,6 @@ function generateTwoColumnTable(cart) {
     return rows;
 }
 
-// Hindi keyboard layout for react-simple-keyboard (basic)
-const hindiKeyboardLayout = {
-    default: [
-        'ऒ ऌ ए ऐ ऑ ओ',
-        'आ इ ई उ ऊ ऋ',
-        'क ख ग घ ङ च छ ज झ ञ',
-        'ट ठ ड ढ ण त थ द ध न',
-        'प फ ब भ म य र ल व श ष स ह',
-        '् ा ि ी ु ू ृ , . -',
-        'Shift Space Backspace',
-    ],
-    shift: [
-        'ऍ ॅ ऎ ॳ ऑ ओ',
-        'आ इ ई ऊ ॡ ऋ',
-        'क़ ख़ ग़ ज़ ड़ ढ़ फ़ य़ ऱ ऴ ॱ',
-        'ट ठ ड ढ ण त थ द ध न',
-        'प फ ब भ म य र ल व श ष स ह',
-        '् ा ि ी ु ू ॄ ? ! +',
-        'Shift Space Backspace',
-    ],
-};
 
 function CustomerPage() {
     const [searchTerm, setSearchTerm] = useState('');

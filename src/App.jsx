@@ -64,7 +64,7 @@ function App() {
   const [employeeName, setEmployeeName] = useState('');
 
   return (
-    <BrowserRouter>
+    <BrowserRouter basename='/retail_shop'>
       <Routes>
         <Route
           path="/"
