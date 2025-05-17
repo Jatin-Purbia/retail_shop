@@ -27,39 +27,33 @@ function formatDate(date = new Date()) {
     return date.toLocaleDateString('en-GB').replace(/\//g, '.');
 }
 
-// Helper to generate two-column table rows with a blank third column
-function generateTwoColumnTable(cart, page=0) {
+// Helper to generate two-column table rows with pagination
+function generateTwoColumnTable(cart, page = 0) {
+    const ROWS_PER_PAGE = 15;
+    const ITEMS_PER_PAGE = ROWS_PER_PAGE * 2;
+    const startIdx = page * ITEMS_PER_PAGE;
+    const pageItems = cart.slice(startIdx, startIdx + ITEMS_PER_PAGE);
 
+    // Prepare empty rows
+    const rows = Array.from({ length: ROWS_PER_PAGE }, () => ['', '', '', '', '', '', '']);
 
-    const pages = paginateCart(cart, ITEMS_PER_PAGE);
-    const pageItems = pages[page] || [];
-    const rows = [];
-    
-    // const maxRows = Math.ceil(totalItems / 2);
-    // Fill empty rows for the page
-    for (let i = 0; i < ROWS_PER_PAGE; i++) {
-        rows.push(['', '', '', '', '', '', '', '']);
+    // Fill left side first
+    for (let i = 0; i < Math.min(pageItems.length, ROWS_PER_PAGE); i++) {
+        const item = pageItems[i];
+        const serialNumber = cart.length - (startIdx + i);
+        rows[i][0] = `${serialNumber}`;
+        rows[i][1] = item.name;
+        rows[i][2] = `${item.quantity} ${item.unit}`;
     }
 
-    let left = true;
-    let rowIndex = 0;
-    let serialNumber = cart.length - page * ITEMS_PER_PAGE;
-
-    // Fill in the items starting from the left column
-    for (let i = 0; i < pageItems.length; i++) {
+    // Then fill right side
+    for (let i = ROWS_PER_PAGE; i < Math.min(pageItems.length, ITEMS_PER_PAGE); i++) {
         const item = pageItems[i];
-        if (left) {
-            rows[rowIndex][0] = `${serialNumber}`;
-            rows[rowIndex][1] = item.name;
-            rows[rowIndex][2] = `${item.quantity} ${item.unit}`;
-        } else {
-            rows[rowIndex][4] = `${serialNumber}`;
-            rows[rowIndex][5] = item.name;
-            rows[rowIndex][6] = `${item.quantity} ${item.unit}`;
-            rowIndex++; // Move to next row after right column
-        }
-        left = !left;
-        serialNumber--;
+        const serialNumber = cart.length - (startIdx + i);
+        const rowIndex = i - ROWS_PER_PAGE;
+        rows[rowIndex][4] = `${serialNumber}`;
+        rows[rowIndex][5] = item.name;
+        rows[rowIndex][6] = `${item.quantity} ${item.unit}`;
     }
 
     return rows;
@@ -100,6 +94,7 @@ function CustomerPage() {
     const nameInputRef = useRef(null);
     const billRef = useRef();
     const [isSearching, setIsSearching] = useState(false);
+    const [currentPage, setCurrentPage] = useState(0);
 
     // Save cart to localStorage whenever it changes
     useEffect(() => {
@@ -392,6 +387,16 @@ function CustomerPage() {
     const timeMappingBill = { सुबह: 'सुबह', दोपहर: 'दोपहर', शाम: 'शाम' };
     const hindiDeliveryTimeBill = timeMappingBill[deliveryTimeHindi] || '';
 
+    // Calculate total pages
+    const totalPages = Math.ceil(cart.length / (15 * 2));
+
+    // Handle page change
+    const handlePageChange = (newPage) => {
+        if (newPage >= 0 && newPage < totalPages) {
+            setCurrentPage(newPage);
+        }
+    };
+
     return (
         <div className="flex flex-col p-2 items-center justify-center min-h-screen bg-primary-light overflow-hidden">
             <div className="bg-white rounded-2xl shadow-2xl p-4 w-full max-w-7xl">
@@ -596,7 +601,11 @@ function CustomerPage() {
 
                     <div>
                         <table className="w-full border-collapse text-base"   
-                        style={{ tableLayout: 'fixed', width: '100%' }}>
+                            style={{ 
+                                tableLayout: 'fixed', 
+                                width: '100%',
+                                borderCollapse: 'collapse'
+                            }}>
                             <thead className="sticky top-0 bg-white">
                                 <tr>
                                     <th className="border border-gray-800 p-2 text-center font-bold" style={{ width: '10%' }}>
@@ -608,39 +617,67 @@ function CustomerPage() {
                                     <th className="border border-gray-800 p-2 text-center font-bold" style={{ width: '10%' }}>
                                         मात्रा
                                     </th>
-
-                                    <th className="border border-gray-800 p-2 w-1/12"></th>
-                                    <th className="border border-gray-800 p-2 w-1/12 text-center text-gray-900 font-bold" style={{ width: '10%' }}>
+                                    <th className="border border-gray-800 p-2" style={{ width: '5%' }}></th>
+                                    <th className="border border-gray-800 p-2 text-center font-bold" style={{ width: '10%' }}>
                                         क्रम संख्या
                                     </th>
-                                    <th className="border border-gray-800 p-2 w-1/4 text-center text-gray-900 font-bold" style={{ width: '25%' }}>
+                                    <th className="border border-gray-800 p-2 text-center font-bold" style={{ width: '25%' }}>
                                         उत्पाद
                                     </th>
-                                    <th className="border border-gray-800 p-2 w-1/6 text-center text-gray-900 font-bold" style={{ width: '10%' }}>
+                                    <th className="border border-gray-800 p-2 text-center font-bold" style={{ width: '10%' }}>
                                         मात्रा
                                     </th>
-                                    <th className="border border-gray-800 p-2 w-1/12"></th>
+                                    <th className="border border-gray-800 p-2" style={{ width: '5%' }}></th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {generateTwoColumnTable(cart, 0).map((row, idx) => (
-                                    <tr key={idx}>
-                                        <td className="border border-gray-800 p-2 h-10 w-1/12 text-center text-gray-900"           
-                                        style={{ width: '10%', wordBreak: 'break-word', overflowWrap: 'break-word' }}>{row[0]}</td>
-                                        <td className="border border-gray-800 p-2 h-10 w-1/4 text-center text-gray-900"
-                                        style={{ width: '25%', wordBreak: 'break-word', overflowWrap: 'break-word' }}>{row[1]}</td>
-                                        <td className="border border-gray-800 p-2 w-1/6 text-center text-gray-900"
-                                        style={{ width: '10%', wordBreak: 'break-word', overflowWrap: 'break-word' }}>{row[2]}</td>
-                                        <td className="border border-gray-800 p-2 w-1/12"></td>
-                                        <td className="border border-gray-800 p-2 w-1/12 text-center text-gray-900"
-                                        style={{ width: '10%', wordBreak: 'break-word', overflowWrap: 'break-word' }}>{row[4]}</td>
-                                        <td className="border border-gray-800 p-2 w-1/4 text-center text-gray-900"
-                                        style={{ width: '25%', wordBreak: 'break-word', overflowWrap: 'break-word' }}>{row[5]}</td>
-                                        <td className="border border-gray-800 p-2 w-1/6 text-center text-gray-900"
-                                        style={{ width: '10%', wordBreak: 'break-word', overflowWrap: 'break-word' }}>{row[6]}</td>
-                                        <td className="border border-gray-800 p-2 w-1/12"></td>
+                                {generateTwoColumnTable(cart, currentPage).map((row, idx) => (
+                                    <tr key={idx} style={{ height: '40px' }}>
+                                        <td className="border border-gray-800 p-2 text-center text-gray-900"           
+                                            style={{ 
+                                                width: '10%', 
+                                                wordBreak: 'break-word', 
+                                                overflowWrap: 'break-word',
+                                                maxWidth: '0'
+                                            }}>{row[0]}</td>
+                                        <td className="border border-gray-800 p-2 text-center text-gray-900"
+                                            style={{ 
+                                                width: '25%', 
+                                                wordBreak: 'break-word', 
+                                                overflowWrap: 'break-word',
+                                                maxWidth: '0'
+                                            }}>{row[1]}</td>
+                                        <td className="border border-gray-800 p-2 text-center text-gray-900"
+                                            style={{ 
+                                                width: '10%', 
+                                                wordBreak: 'break-word', 
+                                                overflowWrap: 'break-word',
+                                                maxWidth: '0'
+                                            }}>{row[2]}</td>
+                                        <td className="border border-gray-800 p-2" style={{ width: '5%' }}></td>
+                                        <td className="border border-gray-800 p-2 text-center text-gray-900"
+                                            style={{ 
+                                                width: '10%', 
+                                                wordBreak: 'break-word', 
+                                                overflowWrap: 'break-word',
+                                                maxWidth: '0'
+                                            }}>{row[4]}</td>
+                                        <td className="border border-gray-800 p-2 text-center text-gray-900"
+                                            style={{ 
+                                                width: '25%', 
+                                                wordBreak: 'break-word', 
+                                                overflowWrap: 'break-word',
+                                                maxWidth: '0'
+                                            }}>{row[5]}</td>
+                                        <td className="border border-gray-800 p-2 text-center text-gray-900"
+                                            style={{ 
+                                                width: '10%', 
+                                                wordBreak: 'break-word', 
+                                                overflowWrap: 'break-word',
+                                                maxWidth: '0'
+                                            }}>{row[6]}</td>
+                                        <td className="border border-gray-800 p-2" style={{ width: '5%' }}></td>
                                     </tr>
-
                                 ))}
                             </tbody>
                         </table>
@@ -661,6 +698,29 @@ function CustomerPage() {
                         Export as PDF
                     </button>
                 </div>
+
+                {/* Pagination Controls */}
+                {totalPages > 1 && (
+                    <div className="flex justify-center items-center gap-4 mt-4">
+                        <button
+                            onClick={() => handlePageChange(currentPage - 1)}
+                            disabled={currentPage === 0}
+                            className="px-4 py-2 bg-primary text-white rounded-lg disabled:opacity-50"
+                        >
+                            Previous
+                        </button>
+                        <span className="text-gray-700">
+                            Page {currentPage + 1} of {totalPages}
+                        </span>
+                        <button
+                            onClick={() => handlePageChange(currentPage + 1)}
+                            disabled={currentPage === totalPages - 1}
+                            className="px-4 py-2 bg-primary text-white rounded-lg disabled:opacity-50"
+                        >
+                            Next
+                        </button>
+                    </div>
+                )}
             </div>
         </div>
     );
