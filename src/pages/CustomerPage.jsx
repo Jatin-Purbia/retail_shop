@@ -8,26 +8,60 @@ import 'react-simple-keyboard/build/css/index.css';
 
 const API_URL = 'http://localhost:5000/api';
 
+
+// Constants for pagination
+const ROWS_PER_PAGE = 23; // Number of rows per page
+const ITEMS_PER_PAGE = ROWS_PER_PAGE * 2; // Two items per row
+
+// Helper to split cart into pages
+function paginateCart(cart, itemsPerPage) {
+    const pages = [];
+    for (let i = 0; i < cart.length; i += itemsPerPage) {
+        pages.push(cart.slice(i, i + itemsPerPage));
+    }
+    return pages;
+}
+
 // Helper to format date as DD.MM.YYYY
 function formatDate(date = new Date()) {
     return date.toLocaleDateString('en-GB').replace(/\//g, '.');
 }
 
 // Helper to generate two-column table rows with a blank third column
-function generateTwoColumnTable(cart) {
+function generateTwoColumnTable(cart, page=0) {
+
+
+    const pages = paginateCart(cart, ITEMS_PER_PAGE);
+    const pageItems = pages[page] || [];
     const rows = [];
-    for (let i = 0; i < cart.length; i += 2) {
-        const left = cart[i];
-        const right = cart[i + 1];
-        rows.push([
-            left ? left.name : '', // Changed to English name
-            left ? `${left.quantity} ${left.unit}` : '',
-            '', // Blank column
-            right ? right.name : '', // Changed to English name
-            right ? `${right.quantity} ${right.unit}` : '',
-            '', // Blank column
-        ]);
+    
+    // const maxRows = Math.ceil(totalItems / 2);
+    // Fill empty rows for the page
+    for (let i = 0; i < ROWS_PER_PAGE; i++) {
+        rows.push(['', '', '', '', '', '', '', '']);
     }
+
+    let left = true;
+    let rowIndex = 0;
+    let serialNumber = cart.length - page * ITEMS_PER_PAGE;
+
+    // Fill in the items starting from the left column
+    for (let i = 0; i < pageItems.length; i++) {
+        const item = pageItems[i];
+        if (left) {
+            rows[rowIndex][0] = `${serialNumber}`;
+            rows[rowIndex][1] = item.name;
+            rows[rowIndex][2] = `${item.quantity} ${item.unit}`;
+        } else {
+            rows[rowIndex][4] = `${serialNumber}`;
+            rows[rowIndex][5] = item.name;
+            rows[rowIndex][6] = `${item.quantity} ${item.unit}`;
+            rowIndex++; // Move to next row after right column
+        }
+        left = !left;
+        serialNumber--;
+    }
+
     return rows;
 }
 
@@ -220,7 +254,8 @@ function CustomerPage() {
             };
             setCart(updatedCart);
         } else {
-            setCart((prevCart) => [...prevCart, cartItem]);
+            // Add new item at the beginning of the cart
+            setCart((prevCart) => [cartItem, ...prevCart]);
         }
 
         setSearchTerm('');
@@ -277,7 +312,7 @@ function CustomerPage() {
             [`डिलीवरी: ${formattedDeliveryDate}, ${englishDeliveryTime}`, '', '', '', '', ''],
             ['', '', '', '', '', ''],
             ['उत्पाद', 'मात्रा', '', 'उत्पाद', 'मात्रा', ''], // Changed to English
-            ...generateTwoColumnTable(cart),
+            ...generateTwoColumnTable(cart, 0),
         ];
         const ws = XLSX.utils.aoa_to_sheet(wsData);
         ws['!cols'] = [{ wch: 20 }, { wch: 12 }, { wch: 5 }, { wch: 20 }, { wch: 12 }, { wch: 5 }];
@@ -498,8 +533,9 @@ function CustomerPage() {
                     style={{
                         fontFamily: 'DejaVu Sans, Arial, sans-serif',
                         color: '#222',
-                        width: '100%',
-                        maxWidth: '100%',
+                        width: '794px',         // fixed A4 width
+                        minHeight: '1123px',    // fixed A4 height
+                        maxWidth: '794px',
                         margin: '0 auto',
                     }}
                 >
@@ -512,36 +548,53 @@ function CustomerPage() {
                         <span>मो. नं. {customerMobile || ''}</span>
                     </div>
 
-                    <div className="overflow-y-auto" style={{ maxHeight: '50vh' }}>
-                        <table className="w-full border-collapse text-base">
+                    <div>
+                        <table className="w-full border-collapse text-base"   
+                        style={{ tableLayout: 'fixed', width: '100%' }}>
                             <thead className="sticky top-0 bg-white">
                                 <tr>
-                                    <th className="border border-gray-800 p-2 w-1/4 text-center text-gray-900 font-bold">
+                                    <th className="border border-gray-800 p-2 text-center font-bold" style={{ width: '10%' }}>
+                                        क्रम संख्या
+                                    </th>
+                                    <th className="border border-gray-800 p-2 text-center font-bold" style={{ width: '25%' }}>
                                         उत्पाद
                                     </th>
-                                    <th className="border border-gray-800 p-2 w-1/6 text-center text-gray-900 font-bold">
+                                    <th className="border border-gray-800 p-2 text-center font-bold" style={{ width: '10%' }}>
                                         मात्रा
                                     </th>
+
                                     <th className="border border-gray-800 p-2 w-1/12"></th>
-                                    <th className="border border-gray-800 p-2 w-1/4 text-center text-gray-900 font-bold">
+                                    <th className="border border-gray-800 p-2 w-1/12 text-center text-gray-900 font-bold" style={{ width: '10%' }}>
+                                        क्रम संख्या
+                                    </th>
+                                    <th className="border border-gray-800 p-2 w-1/4 text-center text-gray-900 font-bold" style={{ width: '25%' }}>
                                         उत्पाद
                                     </th>
-                                    <th className="border border-gray-800 p-2 w-1/6 text-center text-gray-900 font-bold">
+                                    <th className="border border-gray-800 p-2 w-1/6 text-center text-gray-900 font-bold" style={{ width: '10%' }}>
                                         मात्रा
                                     </th>
                                     <th className="border border-gray-800 p-2 w-1/12"></th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {generateTwoColumnTable(cart).map((row, idx) => (
+                                {generateTwoColumnTable(cart, 0).map((row, idx) => (
                                     <tr key={idx}>
-                                        <td className="border border-gray-800 p-2 text-center text-gray-900">{row[0]}</td>
-                                        <td className="border border-gray-800 p-2 text-center text-gray-900">{row[1]}</td>
-                                        <td className="border border-gray-800 p-2"></td>
-                                        <td className="border border-gray-800 p-2 text-center text-gray-900">{row[3]}</td>
-                                        <td className="border border-gray-800 p-2 text-center text-gray-900">{row[4]}</td>
-                                        <td className="border border-gray-800 p-2"></td>
+                                        <td className="border border-gray-800 p-2 h-10 w-1/12 text-center text-gray-900"           
+                                        style={{ width: '10%', wordBreak: 'break-word', overflowWrap: 'break-word' }}>{row[0]}</td>
+                                        <td className="border border-gray-800 p-2 h-10 w-1/4 text-center text-gray-900"
+                                        style={{ width: '25%', wordBreak: 'break-word', overflowWrap: 'break-word' }}>{row[1]}</td>
+                                        <td className="border border-gray-800 p-2 w-1/6 text-center text-gray-900"
+                                        style={{ width: '10%', wordBreak: 'break-word', overflowWrap: 'break-word' }}>{row[2]}</td>
+                                        <td className="border border-gray-800 p-2 w-1/12"></td>
+                                        <td className="border border-gray-800 p-2 w-1/12 text-center text-gray-900"
+                                        style={{ width: '10%', wordBreak: 'break-word', overflowWrap: 'break-word' }}>{row[4]}</td>
+                                        <td className="border border-gray-800 p-2 w-1/4 text-center text-gray-900"
+                                        style={{ width: '25%', wordBreak: 'break-word', overflowWrap: 'break-word' }}>{row[5]}</td>
+                                        <td className="border border-gray-800 p-2 w-1/6 text-center text-gray-900"
+                                        style={{ width: '10%', wordBreak: 'break-word', overflowWrap: 'break-word' }}>{row[6]}</td>
+                                        <td className="border border-gray-800 p-2 w-1/12"></td>
                                     </tr>
+
                                 ))}
                             </tbody>
                         </table>
@@ -568,4 +621,3 @@ function CustomerPage() {
 }
 
 export default CustomerPage;
-
