@@ -8,9 +8,8 @@ import 'react-simple-keyboard/build/css/index.css';
 
 const API_URL = 'http://localhost:5000/api';
 
-
 // Constants for pagination
-const ROWS_PER_PAGE = 23; // Number of rows per page
+const ROWS_PER_PAGE = 5; // Number of rows per column
 const ITEMS_PER_PAGE = ROWS_PER_PAGE * 2; // Two items per row
 
 // Helper to split cart into pages
@@ -29,31 +28,48 @@ function formatDate(date = new Date()) {
 
 // Helper to generate two-column table rows with pagination
 function generateTwoColumnTable(cart, page = 0) {
-    const ROWS_PER_PAGE = 15;
-    const ITEMS_PER_PAGE = ROWS_PER_PAGE * 2;
+    const ITEMS_PER_PAGE = 30; // Maximum items per page
     const startIdx = page * ITEMS_PER_PAGE;
-    const pageItems = cart.slice(startIdx, startIdx + ITEMS_PER_PAGE);
+    // Reverse the slice to get most recent items first
+    const pageItems = [...cart].reverse().slice(startIdx, startIdx + ITEMS_PER_PAGE);
 
-    // Prepare empty rows
-    const rows = Array.from({ length: ROWS_PER_PAGE }, () => ['', '', '', '', '', '', '']);
-
-    // Fill left side first
-    for (let i = 0; i < Math.min(pageItems.length, ROWS_PER_PAGE); i++) {
+    // Calculate number of rows needed based on content
+    const rows = [];
+    let currentRow = { left: {}, right: {} };
+    let leftSideFilled = false;
+    
+    for (let i = 0; i < pageItems.length; i++) {
         const item = pageItems[i];
-        const serialNumber = cart.length - (startIdx + i);
-        rows[i][0] = `${serialNumber}`;
-        rows[i][1] = item.name;
-        rows[i][2] = `${item.quantity} ${item.unit}`;
-    }
-
-    // Then fill right side
-    for (let i = ROWS_PER_PAGE; i < Math.min(pageItems.length, ITEMS_PER_PAGE); i++) {
-        const item = pageItems[i];
-        const serialNumber = cart.length - (startIdx + i);
-        const rowIndex = i - ROWS_PER_PAGE;
-        rows[rowIndex][4] = `${serialNumber}`;
-        rows[rowIndex][5] = item.name;
-        rows[rowIndex][6] = `${item.quantity} ${item.unit}`;
+        // Calculate serial number based on reversed index (most recent = highest number)
+        const serialNumber = startIdx + i + 1;
+        
+        if (!leftSideFilled) {
+            // Fill left side first
+            currentRow = {
+                left: {
+                    serial: `${serialNumber}`,
+                    name: item.name,
+                    quantity: `${item.quantity} ${item.unit}`,
+                },
+                right: {}
+            };
+            rows.push(currentRow);
+            
+            // Check if we've filled the left side
+            if (rows.length >= 15) {
+                leftSideFilled = true;
+            }
+        } else {
+            // Fill right side
+            const rowIndex = rows.length - 1;
+            if (rowIndex >= 0) {
+                rows[rowIndex].right = {
+                    serial: `${serialNumber}`,
+                    name: item.name,
+                    quantity: `${item.quantity} ${item.unit}`,
+                };
+            }
+        }
     }
 
     return rows;
@@ -64,44 +80,31 @@ function CustomerPage() {
     const [quantity, setQuantity] = useState(1);
     const [selectedUnit, setSelectedUnit] = useState('कि.ग्रा.');
     const [cart, setCart] = useState(() => {
-        // Initialize cart from localStorage if available
         const savedCart = localStorage.getItem('customerCart');
         return savedCart ? JSON.parse(savedCart) : [];
     });
     const [filteredItems, setFilteredItems] = useState([]);
-    const [customerName, setCustomerName] = useState(() => {
-        // Initialize customer name from localStorage if available
-        return localStorage.getItem('customerName') || '';
-    });
-    const [customerMobile, setCustomerMobile] = useState(() => {
-        // Initialize customer mobile from localStorage if available
-        return localStorage.getItem('customerMobile') || '';
-    });
+    const [customerName, setCustomerName] = useState(() => localStorage.getItem('customerName') || '');
+    const [customerMobile, setCustomerMobile] = useState(() => localStorage.getItem('customerMobile') || '');
     const [highlightedIndex, setHighlightedIndex] = useState(-1);
     const [nameSuggestions, setNameSuggestions] = useState([]);
     const [showNameSuggestions, setShowNameSuggestions] = useState(false);
     const searchInputRef = useRef(null);
     const [selectedItem, setSelectedItem] = useState(null);
     const [deliveryDate, setDeliveryDate] = useState(() => {
-        // Initialize delivery date from localStorage if available
         const savedDate = localStorage.getItem('deliveryDate');
         return savedDate ? new Date(savedDate) : new Date();
     });
-    const [deliveryTimeHindi, setDeliveryTimeHindi] = useState(() => {
-        // Initialize delivery time from localStorage if available
-        return localStorage.getItem('deliveryTimeHindi') || 'सुबह';
-    });
+    const [deliveryTimeHindi, setDeliveryTimeHindi] = useState(() => localStorage.getItem('deliveryTimeHindi') || 'सुबह');
     const nameInputRef = useRef(null);
     const billRef = useRef();
     const [isSearching, setIsSearching] = useState(false);
     const [currentPage, setCurrentPage] = useState(0);
 
-    // Save cart to localStorage whenever it changes
     useEffect(() => {
         localStorage.setItem('customerCart', JSON.stringify(cart));
     }, [cart]);
 
-    // Save customer details to localStorage whenever they change
     useEffect(() => {
         localStorage.setItem('customerName', customerName);
     }, [customerName]);
@@ -118,7 +121,6 @@ function CustomerPage() {
         localStorage.setItem('deliveryTimeHindi', deliveryTimeHindi);
     }, [deliveryTimeHindi]);
 
-    // Function to transliterate English to Hindi using Google Input Tools API
     const transliterateToHindi = async (text) => {
         if (!text) {
             setNameSuggestions([]);
@@ -142,7 +144,6 @@ function CustomerPage() {
         }
     };
 
-    // Debounce transliteration requests
     useEffect(() => {
         const timer = setTimeout(() => {
             if (customerName && /[a-zA-Z]/.test(customerName)) {
@@ -153,7 +154,6 @@ function CustomerPage() {
         return () => clearTimeout(timer);
     }, [customerName]);
 
-    // Debounced search function
     const debouncedSearch = async (value) => {
         if (!value) {
             setFilteredItems([]);
@@ -178,13 +178,11 @@ function CustomerPage() {
     const handleSearch = (e) => {
         const value = e.target.value;
         setSearchTerm(value);
-        
-        // Clear the timeout if it exists
+
         if (searchTimeoutRef.current) {
             clearTimeout(searchTimeoutRef.current);
         }
 
-        // Set a new timeout
         searchTimeoutRef.current = setTimeout(() => {
             debouncedSearch(value);
         }, 300);
@@ -192,7 +190,6 @@ function CustomerPage() {
 
     const searchTimeoutRef = useRef(null);
 
-    // Cleanup timeout on unmount
     useEffect(() => {
         return () => {
             if (searchTimeoutRef.current) {
@@ -206,16 +203,10 @@ function CustomerPage() {
 
         if (e.key === 'ArrowDown') {
             e.preventDefault();
-            setHighlightedIndex((prev) => {
-                const next = (prev + 1) % nameSuggestions.length;
-                return next;
-            });
+            setHighlightedIndex((prev) => (prev + 1) % nameSuggestions.length);
         } else if (e.key === 'ArrowUp') {
             e.preventDefault();
-            setHighlightedIndex((prev) => {
-                const next = (prev - 1 + nameSuggestions.length) % nameSuggestions.length;
-                return next;
-            });
+            setHighlightedIndex((prev) => (prev - 1 + nameSuggestions.length) % nameSuggestions.length);
         } else if (e.key === 'Enter') {
             e.preventDefault();
             if (highlightedIndex >= 0) {
@@ -256,7 +247,7 @@ function CustomerPage() {
             if (highlightedIndex >= 0) {
                 const selected = filteredItems[highlightedIndex];
                 setSelectedItem(selected);
-                setSearchTerm(selected.name); // Changed to English name
+                setSearchTerm(selected.name);
                 setFilteredItems([]);
                 setHighlightedIndex(-1);
             }
@@ -345,8 +336,24 @@ function CustomerPage() {
             [`नाम: ${customerName || ''}`, '', '', `मो. नं. ${customerMobile || ''}`, '', '', '', ''],
             [`डिलीवरी: ${formattedDeliveryDate}, ${englishDeliveryTime}`, '', '', '', '', ''],
             ['', '', '', '', '', ''],
-            ['उत्पाद', 'मात्रा', '', 'उत्पाद', 'मात्रा', ''], // Changed to English
-            ...generateTwoColumnTable(cart, 0),
+            ['उत्पाद', 'मात्रा', '', 'उत्पाद', 'मात्रा', ''],
+            ...paginateCart(cart, ITEMS_PER_PAGE)[currentPage].reduce((acc, item, index) => {
+                const rowIdx = Math.floor(index / 2);
+                if (!acc[rowIdx]) {
+                    acc[rowIdx] = ['', '', '', '', '', ''];
+                }
+                const serialNumber = cart.length - (currentPage * ITEMS_PER_PAGE + index);
+                if (index % 2 === 0) {
+                    acc[rowIdx][0] = `${serialNumber}`;
+                    acc[rowIdx][1] = item.name;
+                    acc[rowIdx][2] = `${item.quantity} ${item.unit}`;
+                } else {
+                    acc[rowIdx][3] = `${serialNumber}`;
+                    acc[rowIdx][4] = item.name;
+                    acc[rowIdx][5] = `${item.quantity} ${item.unit}`;
+                }
+                return acc;
+            }, Array(ROWS_PER_PAGE).fill(null)).filter(row => row.some(Boolean)),
         ];
         const ws = XLSX.utils.aoa_to_sheet(wsData);
         ws['!cols'] = [{ wch: 20 }, { wch: 12 }, { wch: 5 }, { wch: 20 }, { wch: 12 }, { wch: 5 }];
@@ -374,8 +381,7 @@ function CustomerPage() {
         setCustomerMobile('');
         setDeliveryDate(new Date());
         setDeliveryTimeHindi('सुबह');
-        
-        // Clear localStorage
+
         localStorage.removeItem('customerCart');
         localStorage.removeItem('customerName');
         localStorage.removeItem('customerMobile');
@@ -387,15 +393,15 @@ function CustomerPage() {
     const timeMappingBill = { सुबह: 'सुबह', दोपहर: 'दोपहर', शाम: 'शाम' };
     const hindiDeliveryTimeBill = timeMappingBill[deliveryTimeHindi] || '';
 
-    // Calculate total pages
-    const totalPages = Math.ceil(cart.length / (15 * 2));
+    const totalPages = Math.ceil(cart.length / ITEMS_PER_PAGE);
 
-    // Handle page change
     const handlePageChange = (newPage) => {
         if (newPage >= 0 && newPage < totalPages) {
             setCurrentPage(newPage);
         }
     };
+
+    const billItems = generateTwoColumnTable(cart, currentPage);
 
     return (
         <div className="flex flex-col p-2 items-center justify-center min-h-screen bg-primary-light overflow-hidden">
@@ -419,8 +425,7 @@ function CustomerPage() {
                             placeholder="Type name in English (e.g., 'Rahul')"
                             ref={nameInputRef}
                         />
-                        {showNameSuggestions && nameSuggestions.length > 0 && (
-                            <div className="absolute z-10 w-full mt-1 bg-white border border-accent-light rounded-lg shadow-lg max-h-32 overflow-y-auto">
+                        {showNameSuggestions && nameSuggestions.length > 0 && (<div className="absolute z-10 w-full mt-1 bg-white border border-accent-light rounded-lg shadow-lg max-h-32 overflow-y-auto">
                                 {nameSuggestions.map((suggestion, index) => (
                                     <div
                                         key={index}
@@ -516,7 +521,7 @@ function CustomerPage() {
                                             }}
                                             onMouseDown={() => {
                                                 setSelectedItem(item);
-                                                setSearchTerm(item.name); // Changed to English name
+                                                setSearchTerm(item.name);
                                                 setFilteredItems([]);
                                                 setHighlightedIndex(-1);
                                             }}
@@ -550,12 +555,12 @@ function CustomerPage() {
                                 onChange={(e) => setSelectedUnit(e.target.value)}
                                 className="w-full px-3 py-2 text-base bg-gray-200 border border-accent-light rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                             >
-                                 <option value="किग्रा">कि.ग्रा.</option>
+                                <option value="कि.ग्रा.">कि.ग्रा.</option>
                                 <option value="ग्राम">ग्राम</option>
                                 <option value="पीपा">पीपा</option>
                                 <option value="गड्डी">गड्डी</option>
                                 <option value="पैकेट">पैकेट</option>
-                                <option value=" ">None</option>
+                                <option value="">None</option>
                             </select>
                         </div>
                         <button
@@ -611,49 +616,48 @@ function CustomerPage() {
                                     <th className="border border-gray-800 p-2 text-center font-bold" style={{ width: '10%' }}>
                                         क्रम संख्या
                                     </th>
-                                    <th className="border border-gray-800 p-2 text-center font-bold" style={{ width: '25%' }}>
+                                    <th className="border border-gray-800 p-2 text-center font-bold" style={{ width: '35%' }}>
                                         उत्पाद
                                     </th>
-                                    <th className="border border-gray-800 p-2 text-center font-bold" style={{ width: '10%' }}>
+                                    <th className="border border-gray-800 p-2 text-center font-bold" style={{ width: '15%' }}>
                                         मात्रा
                                     </th>
                                     <th className="border border-gray-800 p-2" style={{ width: '5%' }}></th>
                                     <th className="border border-gray-800 p-2 text-center font-bold" style={{ width: '10%' }}>
                                         क्रम संख्या
                                     </th>
-                                    <th className="border border-gray-800 p-2 text-center font-bold" style={{ width: '25%' }}>
+                                    <th className="border border-gray-800 p-2 text-center font-bold" style={{ width: '35%' }}>
                                         उत्पाद
                                     </th>
-                                    <th className="border border-gray-800 p-2 text-center font-bold" style={{ width: '10%' }}>
+                                    <th className="border border-gray-800 p-2 text-center font-bold" style={{ width: '15%' }}>
                                         मात्रा
                                     </th>
-                                    <th className="border border-gray-800 p-2" style={{ width: '5%' }}></th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {generateTwoColumnTable(cart, currentPage).map((row, idx) => (
-                                    <tr key={idx} style={{ height: '40px' }}>
+                                {billItems.map((row, idx) => (
+                                    <tr key={idx} style={{ height: 'auto' }}>
                                         <td className="border border-gray-800 p-2 text-center text-gray-900"           
                                             style={{ 
                                                 width: '10%', 
                                                 wordBreak: 'break-word', 
                                                 overflowWrap: 'break-word',
                                                 maxWidth: '0'
-                                            }}>{row[0]}</td>
-                                        <td className="border border-gray-800 p-2 text-center text-gray-900"
+                                            }}>{row.left.serial}</td>
+                                        <td className="border border-gray-800 p-2 text-left text-gray-900"
                                             style={{ 
-                                                width: '25%', 
+                                                width: '35%', 
                                                 wordBreak: 'break-word', 
                                                 overflowWrap: 'break-word',
                                                 maxWidth: '0'
-                                            }}>{row[1]}</td>
+                                            }}>{row.left.name}</td>
                                         <td className="border border-gray-800 p-2 text-center text-gray-900"
                                             style={{ 
-                                                width: '10%', 
+                                                width: '15%', 
                                                 wordBreak: 'break-word', 
                                                 overflowWrap: 'break-word',
                                                 maxWidth: '0'
-                                            }}>{row[2]}</td>
+                                            }}>{row.left.quantity}</td>
                                         <td className="border border-gray-800 p-2" style={{ width: '5%' }}></td>
                                         <td className="border border-gray-800 p-2 text-center text-gray-900"
                                             style={{ 
@@ -661,22 +665,21 @@ function CustomerPage() {
                                                 wordBreak: 'break-word', 
                                                 overflowWrap: 'break-word',
                                                 maxWidth: '0'
-                                            }}>{row[4]}</td>
-                                        <td className="border border-gray-800 p-2 text-center text-gray-900"
+                                            }}>{row.right.serial}</td>
+                                        <td className="border border-gray-800 p-2 text-left text-gray-900"
                                             style={{ 
-                                                width: '25%', 
+                                                width: '35%', 
                                                 wordBreak: 'break-word', 
                                                 overflowWrap: 'break-word',
                                                 maxWidth: '0'
-                                            }}>{row[5]}</td>
+                                            }}>{row.right.name}</td>
                                         <td className="border border-gray-800 p-2 text-center text-gray-900"
                                             style={{ 
-                                                width: '10%', 
+                                                width: '15%', 
                                                 wordBreak: 'break-word', 
                                                 overflowWrap: 'break-word',
                                                 maxWidth: '0'
-                                            }}>{row[6]}</td>
-                                        <td className="border border-gray-800 p-2" style={{ width: '5%' }}></td>
+                                            }}>{row.right.quantity}</td>
                                     </tr>
                                 ))}
                             </tbody>
@@ -684,43 +687,40 @@ function CustomerPage() {
                     </div>
                 </div>
 
-                <div className="flex flex-col mt-2 sm:flex-row gap-2 justify-end">
-                    <button
-                        className="px-4 py-2 text-base bg-primary hover:bg-primary-dark text-white rounded-lg font-semibold shadow transition flex-1 sm:flex-none"
-                        onClick={handleExportExcel}
-                    >
-                        Export as Excel
-                    </button>
-                    <button
-                        className="px-4 py-2 text-base bg-primary hover:bg-primary-dark text-white rounded-lg font-semibold shadow transition flex-1 sm:flex-none"
-                        onClick={handleExportPDF}
-                    >
-                        Export as PDF
-                    </button>
-                </div>
-
-                {/* Pagination Controls */}
                 {totalPages > 1 && (
-                    <div className="flex justify-center items-center gap-4 mt-4">
+                    <div className="flex justify-center mt-4">
                         <button
                             onClick={() => handlePageChange(currentPage - 1)}
                             disabled={currentPage === 0}
-                            className="px-4 py-2 bg-primary text-white rounded-lg disabled:opacity-50"
+                            className="px-4 py-2 mx-1 text-base bg-gray-300 hover:bg-gray-400 text-gray-800 rounded-lg font-semibold shadow transition disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             Previous
                         </button>
-                        <span className="text-gray-700">
-                            Page {currentPage + 1} of {totalPages}
-                        </span>
+                        <span>{`Page ${currentPage + 1} of ${totalPages}`}</span>
                         <button
                             onClick={() => handlePageChange(currentPage + 1)}
                             disabled={currentPage === totalPages - 1}
-                            className="px-4 py-2 bg-primary text-white rounded-lg disabled:opacity-50"
+                            className="px-4 py-2 mx-1 text-base bg-gray-300 hover:bg-gray-400 text-gray-800 rounded-lg font-semibold shadow transition disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             Next
                         </button>
                     </div>
                 )}
+
+                <div className="flex justify-end gap-2 mt-4">
+                    <button
+                        onClick={handleExportExcel}
+                        className="px-4 py-2 text-base bg-green-500 hover:bg-green-600 text-white rounded-lg font-semibold shadow transition"
+                    >
+                        Export Excel
+                    </button>
+                    <button
+                        onClick={handleExportPDF}
+                        className="px-4 py-2 text-base bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-semibold shadow transition"
+                    >
+                        Export PDF
+                    </button>
+                </div>
             </div>
         </div>
     );
