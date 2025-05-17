@@ -69,20 +69,59 @@ function CustomerPage() {
     const [searchTerm, setSearchTerm] = useState('');
     const [quantity, setQuantity] = useState(1);
     const [selectedUnit, setSelectedUnit] = useState('कि.ग्रा.');
-    const [cart, setCart] = useState([]);
+    const [cart, setCart] = useState(() => {
+        // Initialize cart from localStorage if available
+        const savedCart = localStorage.getItem('customerCart');
+        return savedCart ? JSON.parse(savedCart) : [];
+    });
     const [filteredItems, setFilteredItems] = useState([]);
-    const [customerName, setCustomerName] = useState('');
-    const [customerMobile, setCustomerMobile] = useState('');
+    const [customerName, setCustomerName] = useState(() => {
+        // Initialize customer name from localStorage if available
+        return localStorage.getItem('customerName') || '';
+    });
+    const [customerMobile, setCustomerMobile] = useState(() => {
+        // Initialize customer mobile from localStorage if available
+        return localStorage.getItem('customerMobile') || '';
+    });
     const [highlightedIndex, setHighlightedIndex] = useState(-1);
     const [nameSuggestions, setNameSuggestions] = useState([]);
     const [showNameSuggestions, setShowNameSuggestions] = useState(false);
     const searchInputRef = useRef(null);
     const [selectedItem, setSelectedItem] = useState(null);
-    const [deliveryDate, setDeliveryDate] = useState(new Date());
-    const [deliveryTimeHindi, setDeliveryTimeHindi] = useState('सुबह');
+    const [deliveryDate, setDeliveryDate] = useState(() => {
+        // Initialize delivery date from localStorage if available
+        const savedDate = localStorage.getItem('deliveryDate');
+        return savedDate ? new Date(savedDate) : new Date();
+    });
+    const [deliveryTimeHindi, setDeliveryTimeHindi] = useState(() => {
+        // Initialize delivery time from localStorage if available
+        return localStorage.getItem('deliveryTimeHindi') || 'सुबह';
+    });
     const nameInputRef = useRef(null);
     const billRef = useRef();
     const [isSearching, setIsSearching] = useState(false);
+
+    // Save cart to localStorage whenever it changes
+    useEffect(() => {
+        localStorage.setItem('customerCart', JSON.stringify(cart));
+    }, [cart]);
+
+    // Save customer details to localStorage whenever they change
+    useEffect(() => {
+        localStorage.setItem('customerName', customerName);
+    }, [customerName]);
+
+    useEffect(() => {
+        localStorage.setItem('customerMobile', customerMobile);
+    }, [customerMobile]);
+
+    useEffect(() => {
+        localStorage.setItem('deliveryDate', deliveryDate.toISOString());
+    }, [deliveryDate]);
+
+    useEffect(() => {
+        localStorage.setItem('deliveryTimeHindi', deliveryTimeHindi);
+    }, [deliveryTimeHindi]);
 
     // Function to transliterate English to Hindi using Google Input Tools API
     const transliterateToHindi = async (text) => {
@@ -340,6 +379,13 @@ function CustomerPage() {
         setCustomerMobile('');
         setDeliveryDate(new Date());
         setDeliveryTimeHindi('सुबह');
+        
+        // Clear localStorage
+        localStorage.removeItem('customerCart');
+        localStorage.removeItem('customerName');
+        localStorage.removeItem('customerMobile');
+        localStorage.removeItem('deliveryDate');
+        localStorage.removeItem('deliveryTimeHindi');
     };
 
     const formattedDeliveryDateBill = formatDate(deliveryDate);
