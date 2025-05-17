@@ -223,6 +223,41 @@ const Admin = () => {
                   className="w-full px-3 py-2 text-base bg-gray-200 border border-accent-light rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                   required
                 />
+                <label className="block text-base text-primary-dark font-semibold mt-4 mb-1">
+                  Unit
+                </label>
+                <select
+                  name="unit"
+                  value={formData.unit}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 text-base bg-gray-200 border border-accent-light rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                  required
+                >
+                  <option value="">Select Unit</option>
+                  <option value="कि.ग्रा.">कि.ग्रा.</option>
+                  <option value="ग्राम">ग्राम</option>
+                  <option value="पीपा">पीपा</option>
+                  <option value="गड्डी">गड्डी</option>
+                  <option value="पैकेट">पैकेट</option>
+                  <option value="नग">नग</option>
+                </select>
+                <div className="mt-4">
+                  <button
+                    type="submit"
+                    className="px-4 py-2 text-base bg-primary hover:bg-primary-dark text-white rounded-lg font-semibold shadow transition mr-2"
+                  >
+                    {editingItem ? 'Update' : 'Add'} Item
+                  </button>
+                  {editingItem && (
+                    <button
+                      type="button"
+                      onClick={resetForm}
+                      className="px-4 py-2 text-base bg-gray-500 hover:bg-gray-600 text-white rounded-lg font-semibold shadow transition"
+                    >
+                      Cancel
+                    </button>
+                  )}
+                </div>
               </div>
               <div className="relative" ref={suggestionsRef}>
                 <label className="block text-base text-primary-dark font-semibold mb-1">
@@ -255,43 +290,6 @@ const Admin = () => {
                   </div>
                 )}
               </div>
-            </div>
-            <div>
-              <label className="block text-base text-primary-dark font-semibold mb-1">
-                Unit
-              </label>
-              <select
-                name="unit"
-                value={formData.unit}
-                onChange={handleInputChange}
-                className="w-full px-3 py-2 text-base bg-gray-200 border border-accent-light rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                required
-              >
-                <option value="">Select Unit</option>
-                <option value="कि.ग्रा.">कि.ग्रा.</option>
-                <option value="ग्राम">ग्राम</option>
-                <option value="पीपा">पीपा</option>
-                <option value="गड्डी">गड्डी</option>
-                <option value="पैकेट">पैकेट</option>
-                <option value="नग">नग</option>
-              </select>
-            </div>
-            <div className="flex space-x-4">
-              <button
-                type="submit"
-                className="px-4 py-2 text-base bg-primary hover:bg-primary-dark text-white rounded-lg font-semibold shadow transition"
-              >
-                {editingItem ? 'Update' : 'Add'} Item
-              </button>
-              {editingItem && (
-                <button
-                  type="button"
-                  onClick={resetForm}
-                  className="px-4 py-2 text-base bg-gray-500 hover:bg-gray-600 text-white rounded-lg font-semibold shadow transition"
-                >
-                  Cancel
-                </button>
-              )}
             </div>
           </form>
         </div>
