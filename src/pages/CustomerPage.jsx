@@ -1,5 +1,4 @@
 import React, { useState, useRef, useEffect } from 'react';
-import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import DatePicker from 'react-datepicker';
@@ -10,16 +9,19 @@ const API_URL = 'http://localhost:5000/api';
 
 // Constants for pagination
 const ROWS_PER_PAGE = 5; // Number of rows per column
-const ITEMS_PER_PAGE = ROWS_PER_PAGE * 2; // Two items per row
+// const ITEMS_PER_PAGE = ROWS_PER_PAGE * 2; // Two items per row
 
 // Helper to split cart into pages
-function paginateCart(cart, itemsPerPage) {
-    const pages = [];
-    for (let i = 0; i < cart.length; i += itemsPerPage) {
-        pages.push(cart.slice(i, i + itemsPerPage));
-    }
-    return pages;
-}
+// function paginateCart(cart, itemsPerPage) {
+//     const pages = [];
+//     for (let i = 0; i < cart.length; i += itemsPerPage) {
+//         const pageItems = cart.slice(i, i + itemsPerPage);
+//         if (pageItems.length > 0) {
+//             pages.push(pageItems);
+//         }
+//     }
+//     return pages;
+// }
 
 // Helper to format date as DD.MM.YYYY
 function formatDate(date = new Date()) {
@@ -28,7 +30,7 @@ function formatDate(date = new Date()) {
 
 // Helper to generate two-column table rows with pagination
 function generateTwoColumnTable(cart, page = 0) {
-    const ITEMS_PER_PAGE = 30; // Maximum items per page
+    const ITEMS_PER_PAGE = 28; // Maximum items per page
     const startIdx = page * ITEMS_PER_PAGE;
     const pageItems = [...cart].reverse().slice(startIdx, startIdx + ITEMS_PER_PAGE);
 
@@ -56,7 +58,7 @@ function generateTwoColumnTable(cart, page = 0) {
             rows.push(currentRow);
             
             // Check if we've filled the left side
-            if (rows.length >= 15) {
+            if (rows.length >= 14) {
                 leftSideFilled = true;
                 break; // Stop after filling left side
             }
@@ -327,7 +329,7 @@ function CustomerPage() {
         });
 
         // Calculate total pages needed (30 items per page, but must fill both sides)
-        const itemsPerPage = 30; // 15 rows * 2 columns
+        const itemsPerPage = 28; // 15 rows * 2 columns
         const totalPages = Math.ceil(cart.length / itemsPerPage);
         const originalContent = input.innerHTML;
 
@@ -342,7 +344,7 @@ function CustomerPage() {
             
             // Create page HTML
             const pageHTML = `
-                <div style="font-family: DejaVu Sans, Arial, sans-serif; color: #222; width: 794px; min-height: 1123px; max-width: 794px; margin: 0 auto;">
+                <div style="font-family: DejaVu Sans, Arial, sans-serif; color: #222; width: 794px; max-height: 1123px; max-width: 794px; margin: 0 auto;">
                     <div style="text-align: center; font-weight: bold; font-size: 20px; margin-bottom: 8px;">! श्री राम जी !!</div>
                     <div style="text-align: center; font-size: 16px; margin-bottom: 8px;">
                         ${`दिनांक ${formattedDeliveryDateBill} को ${hindiDeliveryTimeBill} तक देना है।`}
@@ -351,28 +353,30 @@ function CustomerPage() {
                         <span>नाम: ${customerName || ''}</span>
                         <span>मो. नं. ${customerMobile || ''}</span>
                     </div>
-                    <table style="width: 100%; border-collapse: collapse; font-size: 16px;">
+                    <table style="width: 95%; border-collapse: collapse; font-size: 16px;">
                         <thead>
                             <tr>
-                                <th style="border: 1px solid #000; padding: 8px; text-align: center; width: 10%;">क्रम संख्या</th>
-                                <th style="border: 1px solid #000; padding: 8px; text-align: center; width: 35%;">उत्पाद</th>
-                                <th style="border: 1px solid #000; padding: 8px; text-align: center; width: 15%;">मात्रा</th>
-                                <th style="border: 1px solid #000; padding: 8px; width: 5%;"></th>
-                                <th style="border: 1px solid #000; padding: 8px; text-align: center; width: 10%;">क्रम संख्या</th>
-                                <th style="border: 1px solid #000; padding: 8px; text-align: center; width: 35%;">उत्पाद</th>
-                                <th style="border: 1px solid #000; padding: 8px; text-align: center; width: 15%;">मात्रा</th>
+                                <th style="border: 1px solid #000; padding: 8px; text-align: center; width: 8%;">क्रम संख्या</th>
+                                <th style="border: 1px solid #000; padding: 8px; text-align: center; width: 25%;">उत्पाद</th>
+                                <th style="border: 1px solid #000; padding: 8px; text-align: center; width: 8%;">मात्रा</th>
+                                <th style="border: 1px solid #000; padding: 8px; width: 9%;"></th>
+                                <th style="border: 1px solid #000; padding: 8px; text-align: center; width: 8%;">क्रम संख्या</th>
+                                <th style="border: 1px solid #000; padding: 8px; text-align: center; width: 25%;">उत्पाद</th>
+                                <th style="border: 1px solid #000; padding: 8px; text-align: center; width: 8%;">मात्रा</th>
+                                <th style="border: 1px solid #000; padding: 8px; width: 9%;"></th>
                             </tr>
                         </thead>
                         <tbody>
                             ${pageItems.map((row, idx) => `
                                 <tr>
                                     <td style="border: 1px solid #000; padding: 8px; text-align: center;">${row.left.serial}</td>
-                                    <td style="border: 1px solid #000; padding: 8px; text-align: left;">${row.left.name}</td>
+                                    <td style="border: 1px solid #000; padding: 8px; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 0;" title="${row.left.name}">${row.left.name}</td>
                                     <td style="border: 1px solid #000; padding: 8px; text-align: center;">${row.left.quantity}</td>
                                     <td style="border: 1px solid #000; padding: 8px;"></td>
                                     <td style="border: 1px solid #000; padding: 8px; text-align: center;">${row.right.serial}</td>
-                                    <td style="border: 1px solid #000; padding: 8px; text-align: left;">${row.right.name}</td>
+                                    <td style="border: 1px solid #000; padding: 8px; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 0;" title="${row.right.name}">${row.right.name}</td>
                                     <td style="border: 1px solid #000; padding: 8px; text-align: center;">${row.right.quantity}</td>
+                                    <td style="border: 1px solid #000; padding: 8px;"></td>
                                 </tr>
                             `).join('')}
                         </tbody>
@@ -407,53 +411,53 @@ function CustomerPage() {
         input.innerHTML = originalContent;
     };
 
-    const handleExportExcel = () => {
-        if (cart.length === 0) {
-            alert('Your cart is empty. Add items to export.');
-            return;
-        }
-        const formattedDeliveryDate = formatDate(deliveryDate);
-        const timeMapping = { सुबह: 'Morning', दोपहर: 'Afternoon', शाम: 'Evening' };
-        const englishDeliveryTime = timeMapping[deliveryTimeHindi] || '';
-        const wsData = [
-            ['! श्री राम जी !!'],
-            [`दिनांक ${formattedDeliveryDate} को ${deliveryTimeHindi} तक देना है।`],
-            [`नाम: ${customerName || ''}`, '', '', `मो. नं. ${customerMobile || ''}`, '', '', '', ''],
-            [`डिलीवरी: ${formattedDeliveryDate}, ${englishDeliveryTime}`, '', '', '', '', ''],
-            ['', '', '', '', '', ''],
-            ['उत्पाद', 'मात्रा', '', 'उत्पाद', 'मात्रा', ''],
-            ...paginateCart(cart, ITEMS_PER_PAGE)[currentPage].reduce((acc, item, index) => {
-                const rowIdx = Math.floor(index / 2);
-                if (!acc[rowIdx]) {
-                    acc[rowIdx] = ['', '', '', '', '', ''];
-                }
-                const serialNumber = cart.length - (currentPage * ITEMS_PER_PAGE + index);
-                if (index % 2 === 0) {
-                    acc[rowIdx][0] = `${serialNumber}`;
-                    acc[rowIdx][1] = item.name;
-                    acc[rowIdx][2] = `${item.quantity} ${item.unit}`;
-                } else {
-                    acc[rowIdx][3] = `${serialNumber}`;
-                    acc[rowIdx][4] = item.name;
-                    acc[rowIdx][5] = `${item.quantity} ${item.unit}`;
-                }
-                return acc;
-            }, Array(ROWS_PER_PAGE).fill(null)).filter(row => row.some(Boolean)),
-        ];
-        const ws = XLSX.utils.aoa_to_sheet(wsData);
-        ws['!cols'] = [{ wch: 20 }, { wch: 12 }, { wch: 5 }, { wch: 20 }, { wch: 12 }, { wch: 5 }];
-        const range = XLSX.utils.decode_range(ws['!ref']);
-        for (let R = range.s.r; R <= range.e.r; ++R) {
-            for (let C = range.s.c; C <= range.e.c; ++C) {
-                const cell_address = XLSX.utils.encode_cell({ c: C, r: R });
-                if (!ws[cell_address]) continue;
-                ws[cell_address].s = { alignment: { horizontal: 'center' } };
-            }
-        }
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, 'Bill');
-        XLSX.writeFile(wb, `bill_${customerName || 'customer'}_${formatDate()}.xlsx`);
-    };
+    // const handleExportExcel = () => {
+    //     if (cart.length === 0) {
+    //         alert('Your cart is empty. Add items to export.');
+    //         return;
+    //     }
+    //     const formattedDeliveryDate = formatDate(deliveryDate);
+    //     const timeMapping = { सुबह: 'Morning', दोपहर: 'Afternoon', शाम: 'Evening' };
+    //     const englishDeliveryTime = timeMapping[deliveryTimeHindi] || '';
+    //     const wsData = [
+    //         ['! श्री राम जी !!'],
+    //         [`दिनांक ${formattedDeliveryDate} को ${deliveryTimeHindi} तक देना है।`],
+    //         [`नाम: ${customerName || ''}`, '', '', `मो. नं. ${customerMobile || ''}`, '', '', '', ''],
+    //         [`डिलीवरी: ${formattedDeliveryDate}, ${englishDeliveryTime}`, '', '', '', '', ''],
+    //         ['', '', '', '', '', ''],
+    //         ['उत्पाद', 'मात्रा', '', 'उत्पाद', 'मात्रा', ''],
+    //         ...paginateCart(cart, ITEMS_PER_PAGE)[currentPage].reduce((acc, item, index) => {
+    //             const rowIdx = Math.floor(index / 2);
+    //             if (!acc[rowIdx]) {
+    //                 acc[rowIdx] = ['', '', '', '', '', ''];
+    //             }
+    //             const serialNumber = cart.length - (currentPage * ITEMS_PER_PAGE + index);
+    //             if (index % 2 === 0) {
+    //                 acc[rowIdx][0] = `${serialNumber}`;
+    //                 acc[rowIdx][1] = item.name;
+    //                 acc[rowIdx][2] = `${item.quantity} ${item.unit}`;
+    //             } else {
+    //                 acc[rowIdx][3] = `${serialNumber}`;
+    //                 acc[rowIdx][4] = item.name;
+    //                 acc[rowIdx][5] = `${item.quantity} ${item.unit}`;
+    //             }
+    //             return acc;
+    //         }, Array(ROWS_PER_PAGE).fill(null)).filter(row => row.some(Boolean)),
+    //     ];
+    //     const ws = XLSX.utils.aoa_to_sheet(wsData);
+    //     ws['!cols'] = [{ wch: 20 }, { wch: 12 }, { wch: 5 }, { wch: 20 }, { wch: 12 }, { wch: 5 }];
+    //     const range = XLSX.utils.decode_range(ws['!ref']);
+    //     for (let R = range.s.r; R <= range.e.r; ++R) {
+    //         for (let C = range.s.c; C <= range.e.c; ++C) {
+    //             const cell_address = XLSX.utils.encode_cell({ c: C, r: R });
+    //             if (!ws[cell_address]) continue;
+    //             ws[cell_address].s = { alignment: { horizontal: 'center' } };
+    //         }
+    //     }
+    //     const wb = XLSX.utils.book_new();
+    //     XLSX.utils.book_append_sheet(wb, ws, 'Bill');
+    //     XLSX.writeFile(wb, `bill_${customerName || 'customer'}_${formatDate()}.xlsx`);
+    // };
 
     const handleClearCart = () => {
         setCart([]);
@@ -478,7 +482,20 @@ function CustomerPage() {
     const timeMappingBill = { सुबह: 'सुबह', दोपहर: 'दोपहर', शाम: 'शाम' };
     const hindiDeliveryTimeBill = timeMappingBill[deliveryTimeHindi] || '';
 
-    const totalPages = Math.ceil(cart.length / ITEMS_PER_PAGE);
+    // Calculate actual number of pages with items
+    const calculateTotalPages = () => {
+        const itemsPerPage = 28;
+        let pages = 0;
+        for (let i = 0; i < cart.length; i += itemsPerPage) {
+            const pageItems = cart.slice(i, i + itemsPerPage);
+            if (pageItems.length > 0) {
+                pages++;
+            }
+        }
+        return pages;
+    };
+
+    const totalPages = calculateTotalPages();
 
     const handlePageChange = (newPage) => {
         if (newPage >= 0 && newPage < totalPages) {
@@ -675,7 +692,7 @@ function CustomerPage() {
                         fontFamily: 'DejaVu Sans, Arial, sans-serif',
                         color: '#222',
                         width: '794px',         // fixed A4 width
-                        minHeight: '1123px',    // fixed A4 height
+                        maxHeight: '1123px',    // fixed A4 height
                         maxWidth: '794px',
                         margin: '0 auto',
                     }}
@@ -698,25 +715,26 @@ function CustomerPage() {
                             }}>
                             <thead className="sticky top-0 bg-white">
                                 <tr>
-                                    <th className="border border-gray-800 p-2 text-center font-bold" style={{ width: '10%' }}>
+                                    <th className="border border-gray-800 p-2 text-center font-bold" style={{ width: '8%' }}>
                                         क्रम संख्या
                                     </th>
-                                    <th className="border border-gray-800 p-2 text-center font-bold" style={{ width: '35%' }}>
+                                    <th className="border border-gray-800 p-2 text-center font-bold" style={{ width: '25%' }}>
                                         उत्पाद
                                     </th>
-                                    <th className="border border-gray-800 p-2 text-center font-bold" style={{ width: '15%' }}>
+                                    <th className="border border-gray-800 p-2 text-center font-bold" style={{ width: '8%' }}>
                                         मात्रा
                                     </th>
-                                    <th className="border border-gray-800 p-2" style={{ width: '5%' }}></th>
-                                    <th className="border border-gray-800 p-2 text-center font-bold" style={{ width: '10%' }}>
+                                    <th className="border border-gray-800 p-2" style={{ width: '9%' }}></th>
+                                    <th className="border border-gray-800 p-2 text-center font-bold" style={{ width: '8%' }}>
                                         क्रम संख्या
                                     </th>
-                                    <th className="border border-gray-800 p-2 text-center font-bold" style={{ width: '35%' }}>
+                                    <th className="border border-gray-800 p-2 text-center font-bold" style={{ width: '25%' }}>
                                         उत्पाद
                                     </th>
-                                    <th className="border border-gray-800 p-2 text-center font-bold" style={{ width: '15%' }}>
+                                    <th className="border border-gray-800 p-2 text-center font-bold" style={{ width: '8%' }}>
                                         मात्रा
                                     </th>
+                                    <th className="border border-gray-800 p-2" style={{ width: '9%' }}></th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -724,47 +742,50 @@ function CustomerPage() {
                                     <tr key={idx} style={{ height: 'auto' }}>
                                         <td className="border border-gray-800 p-2 text-center text-gray-900"           
                                             style={{ 
-                                                width: '10%', 
+                                                width: '8%', 
                                                 wordBreak: 'break-word', 
                                                 overflowWrap: 'break-word',
                                                 maxWidth: '0'
                                             }}>{row.left.serial}</td>
                                         <td className="border border-gray-800 p-2 text-left text-gray-900"
                                             style={{ 
-                                                width: '35%', 
-                                                wordBreak: 'break-word', 
-                                                overflowWrap: 'break-word',
+                                                width: '25%', 
+                                                whiteSpace: 'nowrap',
+                                                overflow: 'hidden',
+                                                textOverflow: 'ellipsis',
                                                 maxWidth: '0'
-                                            }}>{row.left.name}</td>
+                                            }} title={row.left.name}>{row.left.name}</td>
                                         <td className="border border-gray-800 p-2 text-center text-gray-900"
                                             style={{ 
-                                                width: '15%', 
+                                                width: '8%', 
                                                 wordBreak: 'break-word', 
                                                 overflowWrap: 'break-word',
                                                 maxWidth: '0'
                                             }}>{row.left.quantity}</td>
-                                        <td className="border border-gray-800 p-2" style={{ width: '5%' }}></td>
+                                        <td className="border border-gray-800 p-2" style={{ width: '9%' }}></td>
                                         <td className="border border-gray-800 p-2 text-center text-gray-900"
                                             style={{ 
-                                                width: '10%', 
+                                                width: '8%', 
                                                 wordBreak: 'break-word', 
                                                 overflowWrap: 'break-word',
                                                 maxWidth: '0'
                                             }}>{row.right.serial}</td>
                                         <td className="border border-gray-800 p-2 text-left text-gray-900"
                                             style={{ 
-                                                width: '35%', 
-                                                wordBreak: 'break-word', 
-                                                overflowWrap: 'break-word',
+                                                width: '25%', 
+                                                whiteSpace: 'nowrap',
+                                                overflow: 'hidden',
+                                                textOverflow: 'ellipsis',
                                                 maxWidth: '0'
-                                            }}>{row.right.name}</td>
+                                            }} title={row.right.name}>{row.right.name}</td>
                                         <td className="border border-gray-800 p-2 text-center text-gray-900"
                                             style={{ 
-                                                width: '15%', 
+                                                width: '8%', 
                                                 wordBreak: 'break-word', 
                                                 overflowWrap: 'break-word',
                                                 maxWidth: '0'
                                             }}>{row.right.quantity}</td>
+                                        <td className="border border-gray-800 p-2" style={{ width: '9%' }}></td>
                                     </tr>
                                 ))}
                             </tbody>
@@ -793,12 +814,6 @@ function CustomerPage() {
                 )}
 
                 <div className="flex justify-end gap-2 mt-4">
-                    <button
-                        onClick={handleExportExcel}
-                        className="px-4 py-2 text-base bg-green-500 hover:bg-green-600 text-white rounded-lg font-semibold shadow transition"
-                    >
-                        Export Excel
-                    </button>
                     <button
                         onClick={handleExportPDF}
                         className="px-4 py-2 text-base bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-semibold shadow transition"
