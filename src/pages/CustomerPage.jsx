@@ -30,17 +30,17 @@ function formatDate(date = new Date()) {
 function generateTwoColumnTable(cart, page = 0) {
     const ITEMS_PER_PAGE = 30; // Maximum items per page
     const startIdx = page * ITEMS_PER_PAGE;
-    // Reverse the slice to get most recent items first
     const pageItems = [...cart].reverse().slice(startIdx, startIdx + ITEMS_PER_PAGE);
 
     // Calculate number of rows needed based on content
     const rows = [];
     let currentRow = { left: {}, right: {} };
     let leftSideFilled = false;
+    let rightSideIndex = 0; // Track the current row index for right side
     
+    // First, fill the left side completely
     for (let i = 0; i < pageItems.length; i++) {
         const item = pageItems[i];
-        // Calculate serial number based on reversed index (most recent = highest number)
         const serialNumber = startIdx + i + 1;
         
         if (!leftSideFilled) {
@@ -58,18 +58,34 @@ function generateTwoColumnTable(cart, page = 0) {
             // Check if we've filled the left side
             if (rows.length >= 15) {
                 leftSideFilled = true;
-            }
-        } else {
-            // Fill right side
-            const rowIndex = rows.length - 1;
-            if (rowIndex >= 0) {
-                rows[rowIndex].right = {
-                    serial: `${serialNumber}`,
-                    name: item.name,
-                    quantity: `${item.quantity} ${item.unit}`,
-                };
+                break; // Stop after filling left side
             }
         }
+    }
+
+    // Then, fill the right side completely
+    for (let i = rows.length; i < pageItems.length; i++) {
+        const item = pageItems[i];
+        const serialNumber = startIdx + i + 1;
+        
+        if (rightSideIndex < rows.length) {
+            rows[rightSideIndex].right = {
+                serial: `${serialNumber}`,
+                name: item.name,
+                quantity: `${item.quantity} ${item.unit}`,
+            };
+            rightSideIndex++;
+        }
+    }
+
+    // If we have empty rows on the right side, fill them with empty cells
+    while (rightSideIndex < rows.length) {
+        rows[rightSideIndex].right = {
+            serial: '',
+            name: '',
+            quantity: '',
+        };
+        rightSideIndex++;
     }
 
     return rows;
@@ -302,24 +318,93 @@ function CustomerPage() {
         }
         const input = billRef.current;
         if (!input) return;
-        const canvas = await html2canvas(input, { scale: 2 });
-        const imgData = canvas.toDataURL('image/png');
+
+        // Create PDF
         const pdf = new jsPDF({
             orientation: 'portrait',
             unit: 'pt',
             format: 'a4',
         });
-        const pdfWidth = pdf.internal.pageSize.getWidth();
-        const pdfHeight = pdf.internal.pageSize.getHeight();
-        const imgProps = {
-            width: canvas.width,
-            height: canvas.height,
-        };
-        const ratio = Math.min(pdfWidth / imgProps.width, pdfHeight / imgProps.height);
-        const imgWidth = imgProps.width * ratio;
-        const imgHeight = imgProps.height * ratio;
-        pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
+
+        // Calculate total pages needed (30 items per page, but must fill both sides)
+        const itemsPerPage = 30; // 15 rows * 2 columns
+        const totalPages = Math.ceil(cart.length / itemsPerPage);
+        const originalContent = input.innerHTML;
+
+        // Generate each page
+        for (let page = 0; page < totalPages; page++) {
+            if (page > 0) {
+                pdf.addPage();
+            }
+
+            // Generate table for this page
+            const pageItems = generateTwoColumnTable(cart, page);
+            
+            // Create page HTML
+            const pageHTML = `
+                <div style="font-family: DejaVu Sans, Arial, sans-serif; color: #222; width: 794px; min-height: 1123px; max-width: 794px; margin: 0 auto;">
+                    <div style="text-align: center; font-weight: bold; font-size: 20px; margin-bottom: 8px;">! श्री राम जी !!</div>
+                    <div style="text-align: center; font-size: 16px; margin-bottom: 8px;">
+                        ${`दिनांक ${formattedDeliveryDateBill} को ${hindiDeliveryTimeBill} तक देना है।`}
+                    </div>
+                    <div style="display: flex; justify-content: space-between; font-size: 16px; margin-bottom: 8px;">
+                        <span>नाम: ${customerName || ''}</span>
+                        <span>मो. नं. ${customerMobile || ''}</span>
+                    </div>
+                    <table style="width: 100%; border-collapse: collapse; font-size: 16px;">
+                        <thead>
+                            <tr>
+                                <th style="border: 1px solid #000; padding: 8px; text-align: center; width: 10%;">क्रम संख्या</th>
+                                <th style="border: 1px solid #000; padding: 8px; text-align: center; width: 35%;">उत्पाद</th>
+                                <th style="border: 1px solid #000; padding: 8px; text-align: center; width: 15%;">मात्रा</th>
+                                <th style="border: 1px solid #000; padding: 8px; width: 5%;"></th>
+                                <th style="border: 1px solid #000; padding: 8px; text-align: center; width: 10%;">क्रम संख्या</th>
+                                <th style="border: 1px solid #000; padding: 8px; text-align: center; width: 35%;">उत्पाद</th>
+                                <th style="border: 1px solid #000; padding: 8px; text-align: center; width: 15%;">मात्रा</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${pageItems.map((row, idx) => `
+                                <tr>
+                                    <td style="border: 1px solid #000; padding: 8px; text-align: center;">${row.left.serial}</td>
+                                    <td style="border: 1px solid #000; padding: 8px; text-align: left;">${row.left.name}</td>
+                                    <td style="border: 1px solid #000; padding: 8px; text-align: center;">${row.left.quantity}</td>
+                                    <td style="border: 1px solid #000; padding: 8px;"></td>
+                                    <td style="border: 1px solid #000; padding: 8px; text-align: center;">${row.right.serial}</td>
+                                    <td style="border: 1px solid #000; padding: 8px; text-align: left;">${row.right.name}</td>
+                                    <td style="border: 1px solid #000; padding: 8px; text-align: center;">${row.right.quantity}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+
+            // Replace the content
+            input.innerHTML = pageHTML;
+
+            // Generate canvas for this page
+            const canvas = await html2canvas(input, { scale: 2 });
+            const imgData = canvas.toDataURL('image/png');
+            
+            // Add image to PDF
+            const pdfWidth = pdf.internal.pageSize.getWidth();
+            const pdfHeight = pdf.internal.pageSize.getHeight();
+            const imgProps = {
+                width: canvas.width,
+                height: canvas.height,
+            };
+            const ratio = Math.min(pdfWidth / imgProps.width, pdfHeight / imgProps.height);
+            const imgWidth = imgProps.width * ratio;
+            const imgHeight = imgProps.height * ratio;
+            pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
+        }
+
+        // Save the PDF
         pdf.save(`bill_${customerName || 'guest'}_${formatDate()}.pdf`);
+
+        // Restore original content
+        input.innerHTML = originalContent;
     };
 
     const handleExportExcel = () => {
