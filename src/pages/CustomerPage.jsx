@@ -103,6 +103,7 @@ function CustomerPage() {
     });
     const [filteredItems, setFilteredItems] = useState([]);
     const [customerName, setCustomerName] = useState(() => localStorage.getItem('customerName') || '');
+    const [customerNameHindi, setCustomerNameHindi] = useState(() => localStorage.getItem('customerNameHindi') || '');
     const [customerMobile, setCustomerMobile] = useState(() => localStorage.getItem('customerMobile') || '');
     const [highlightedIndex, setHighlightedIndex] = useState(-1);
     const [nameSuggestions, setNameSuggestions] = useState([]);
@@ -118,6 +119,9 @@ function CustomerPage() {
     const billRef = useRef();
     const [isSearching, setIsSearching] = useState(false);
     const [currentPage, setCurrentPage] = useState(0);
+    const [showHindiSuggestions, setShowHindiSuggestions] = useState(false);
+    const [hindiSuggestions, setHindiSuggestions] = useState([]);
+    const [highlightedHindiIndex, setHighlightedHindiIndex] = useState(-1);
 
     useEffect(() => {
         localStorage.setItem('customerCart', JSON.stringify(cart));
@@ -126,6 +130,10 @@ function CustomerPage() {
     useEffect(() => {
         localStorage.setItem('customerName', customerName);
     }, [customerName]);
+
+    useEffect(() => {
+        localStorage.setItem('customerNameHindi', customerNameHindi);
+    }, [customerNameHindi]);
 
     useEffect(() => {
         localStorage.setItem('customerMobile', customerMobile);
@@ -141,7 +149,7 @@ function CustomerPage() {
 
     const transliterateToHindi = async (text) => {
         if (!text) {
-            setNameSuggestions([]);
+            setHindiSuggestions([]);
             return;
         }
 
@@ -152,9 +160,9 @@ function CustomerPage() {
             const data = await response.json();
             if (data && data[1] && data[1][0] && data[1][0][1]) {
                 const suggestions = data[1][0][1];
-                setNameSuggestions(suggestions);
+                setHindiSuggestions(suggestions);
                 if (suggestions.length > 0) {
-                    setCustomerName(suggestions[0]);
+                    setCustomerNameHindi(suggestions[0]);
                 }
             }
         } catch (error) {
@@ -365,43 +373,45 @@ function CustomerPage() {
             
             // Create page HTML
             const pageHTML = `
-                <div style="font-family: DejaVu Sans, Arial, sans-serif; color: #222; width: 794px; max-height: 1123px; max-width: 794px; margin: 0 auto;">
-                    <div style="text-align: center; font-weight: bold; font-size: 20px; margin-bottom: 8px;">! श्री राम जी !!</div>
-                    <div style="text-align: center; font-size: 16px; margin-bottom: 8px;">
+                <div style="font-family: DejaVu Sans, Arial, sans-serif; padding-right: 20px; color: #222; width: 794px; margin: 0 auto; display: flex; flex-direction: column; align-items: center;">
+                    <div style="text-align: center; font-weight: bold; font-size: 20px; margin-bottom: 8px; width: 100%;">! श्री राम जी !!</div>
+                    <div style="text-align: center; font-size: 16px; margin-bottom: 8px; width: 100%;">
                         ${`दिनांक ${formattedDeliveryDateBill} को ${hindiDeliveryTimeBill} तक देना है।`}
                     </div>
-                    <div style="display: flex; justify-content: space-between; font-size: 16px; margin-bottom: 8px;">
-                        <span>नाम: ${customerName || ''}</span>
-                        <span>मो. नं. ${customerMobile || ''}</span>
+                    <div style="display: flex; justify-content: space-between; font-size: 16px; margin-bottom: 8px; padding: 0 20px; width: 100%;">
+                        <span style="flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">नाम: ${customerNameHindi || ''}</span>
+                        <span style="white-space: nowrap; flex-shrink: 0;">मो. नं. ${customerMobile || ''}</span>
                     </div>
-                    <table style="width: 95%; border-collapse: collapse; font-size: 16px;">
-                        <thead>
-                            <tr>
-                                <th style="border: 1px solid #000; padding: 8px; text-align: center; width: 8%;">क्रम संख्या</th>
-                                <th style="border: 1px solid #000; padding: 8px; text-align: center; width: 25%;">उत्पाद</th>
-                                <th style="border: 1px solid #000; padding: 8px; text-align: center; width: 8%;">मात्रा</th>
-                                <th style="border: 1px solid #000; padding: 8px; width: 9%;"></th>
-                                <th style="border: 1px solid #000; padding: 8px; text-align: center; width: 8%;">क्रम संख्या</th>
-                                <th style="border: 1px solid #000; padding: 8px; text-align: center; width: 25%;">उत्पाद</th>
-                                <th style="border: 1px solid #000; padding: 8px; text-align: center; width: 8%;">मात्रा</th>
-                                <th style="border: 1px solid #000; padding: 8px; width: 9%;"></th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${pageItems.map((row, idx) => `
+                    <div style="width: 100%; display: flex; justify-content: center;">
+                        <table style="width: 95%; border-collapse: collapse; font-size: 16px;">
+                            <thead>
                                 <tr>
-                                    <td style="border: 1px solid #000; padding: 8px; text-align: center;">${row.left.serial}</td>
-                                    <td style="border: 1px solid #000; padding: 8px; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 0;" title="${row.left.name}">${row.left.name}</td>
-                                    <td style="border: 1px solid #000; padding: 8px; text-align: center;">${row.left.quantity}</td>
-                                    <td style="border: 1px solid #000; padding: 8px;"></td>
-                                    <td style="border: 1px solid #000; padding: 8px; text-align: center;">${row.right.serial}</td>
-                                    <td style="border: 1px solid #000; padding: 8px; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 0;" title="${row.right.name}">${row.right.name}</td>
-                                    <td style="border: 1px solid #000; padding: 8px; text-align: center;">${row.right.quantity}</td>
-                                    <td style="border: 1px solid #000; padding: 8px;"></td>
+                                    <th style="border: 1px solid #000; padding: 8px; text-align: center; width: 8%;">क्रम संख्या</th>
+                                    <th style="border: 1px solid #000; padding: 8px; text-align: center; width: 25%;">उत्पाद</th>
+                                    <th style="border: 1px solid #000; padding: 8px; text-align: center; width: 8%;">मात्रा</th>
+                                    <th style="border: 1px solid #000; padding: 8px; width: 9%;"></th>
+                                    <th style="border: 1px solid #000; padding: 8px; text-align: center; width: 8%;">क्रम संख्या</th>
+                                    <th style="border: 1px solid #000; padding: 8px; text-align: center; width: 25%;">उत्पाद</th>
+                                    <th style="border: 1px solid #000; padding: 8px; text-align: center; width: 8%;">मात्रा</th>
+                                    <th style="border: 1px solid #000; padding: 8px; width: 9%;"></th>
                                 </tr>
-                            `).join('')}
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody>
+                                ${pageItems.map((row, idx) => `
+                                    <tr>
+                                        <td style="border: 1px solid #000; padding: 8px; text-align: center;">${row.left.serial}</td>
+                                        <td style="border: 1px solid #000; padding: 8px; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 0;" title="${row.left.name}">${row.left.name}</td>
+                                        <td style="border: 1px solid #000; padding: 8px; text-align: center;">${row.left.quantity}</td>
+                                        <td style="border: 1px solid #000; padding: 8px;"></td>
+                                        <td style="border: 1px solid #000; padding: 8px; text-align: center;">${row.right.serial}</td>
+                                        <td style="border: 1px solid #000; padding: 8px; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 0;" title="${row.right.name}">${row.right.name}</td>
+                                        <td style="border: 1px solid #000; padding: 8px; text-align: center;">${row.right.quantity}</td>
+                                        <td style="border: 1px solid #000; padding: 8px;"></td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             `;
 
@@ -526,6 +536,33 @@ function CustomerPage() {
 
     const billItems = generateTwoColumnTable(cart, currentPage);
 
+    const handleHindiSuggestionClick = (suggestion) => {
+        setCustomerNameHindi(suggestion);
+        setShowHindiSuggestions(false);
+        setHighlightedHindiIndex(-1);
+    };
+
+    const handleHindiFieldKeyDown = (e) => {
+        if (!hindiSuggestions.length) return;
+
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            setHighlightedHindiIndex((prev) => (prev + 1) % hindiSuggestions.length);
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            setHighlightedHindiIndex((prev) => (prev - 1 + hindiSuggestions.length) % hindiSuggestions.length);
+        } else if (e.key === 'Enter') {
+            e.preventDefault();
+            if (highlightedHindiIndex >= 0) {
+                handleHindiSuggestionClick(hindiSuggestions[highlightedHindiIndex]);
+            }
+        } else if (e.key === 'Escape') {
+            e.preventDefault();
+            setShowHindiSuggestions(false);
+            setHighlightedHindiIndex(-1);
+        }
+    };
+
     return (
         <div className="flex flex-col p-2 items-center justify-center min-h-screen bg-primary-light overflow-hidden">
             <div className="bg-white rounded-2xl shadow-2xl p-4 w-full max-w-7xl">
@@ -535,31 +572,39 @@ function CustomerPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                     <div className="relative">
                         <label className="block text-base text-primary-dark font-semibold mb-1">
-                            ग्राहक का नाम
+                            ग्राहक का नाम (अंग्रेजी में)
                         </label>
                         <input
                             type="text"
                             value={customerName}
                             onChange={(e) => setCustomerName(e.target.value)}
-                            onFocus={() => setShowNameSuggestions(true)}
-                            onBlur={() => setTimeout(() => setShowNameSuggestions(false), 200)}
-                            onKeyDown={handleNameKeyDown}
                             className="w-full px-3 py-2 text-base bg-gray-200 border border-accent-light rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                             placeholder="Type name in English (e.g., 'Rahul')"
-                            ref={nameInputRef}
                         />
-                        {showNameSuggestions && nameSuggestions.length > 0 && (<div className="absolute z-10 w-full mt-1 bg-white border border-accent-light rounded-lg shadow-lg max-h-32 overflow-y-auto">
-                                {nameSuggestions.map((suggestion, index) => (
+                    </div>
+                    <div className="relative">
+                        <label className="block text-base text-primary-dark font-semibold mb-1">
+                            ग्राहक का नाम (हिंदी में)
+                        </label>
+                        <input
+                            type="text"
+                            value={customerNameHindi}
+                            onChange={(e) => setCustomerNameHindi(e.target.value)}
+                            onFocus={() => setShowHindiSuggestions(true)}
+                            onBlur={() => setTimeout(() => setShowHindiSuggestions(false), 200)}
+                            onKeyDown={handleHindiFieldKeyDown}
+                            className="w-full px-3 py-2 text-base bg-gray-100 border border-accent-light rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                            placeholder="हिंदी में नाम"
+                        />
+                        {showHindiSuggestions && hindiSuggestions.length > 0 && (
+                            <div className="absolute z-10 w-full mt-1 bg-white border border-accent-light rounded-lg shadow-lg max-h-32 overflow-y-auto">
+                                {hindiSuggestions.map((suggestion, index) => (
                                     <div
                                         key={index}
                                         className={`px-3 py-1 text-base hover:bg-primary-light/10 cursor-pointer ${
-                                            index === highlightedIndex ? 'bg-primary-light/20' : ''
+                                            index === highlightedHindiIndex ? 'bg-primary-light/20' : ''
                                         }`}
-                                        onMouseDown={() => {
-                                            setCustomerName(suggestion);
-                                            setShowNameSuggestions(false);
-                                            setHighlightedIndex(-1);
-                                        }}
+                                        onMouseDown={() => handleHindiSuggestionClick(suggestion)}
                                     >
                                         {suggestion}
                                     </div>
@@ -567,6 +612,8 @@ function CustomerPage() {
                             </div>
                         )}
                     </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                     <div>
                         <label className="block text-base text-primary-dark font-semibold mb-1">
                             मोबाइल नंबर
@@ -712,8 +759,8 @@ function CustomerPage() {
                     style={{
                         fontFamily: 'DejaVu Sans, Arial, sans-serif',
                         color: '#222',
-                        width: '794px',         // fixed A4 width
-                        maxHeight: '1123px',    // fixed A4 height
+                        width: '794px',
+                        maxHeight: '1123px',
                         maxWidth: '794px',
                         margin: '0 auto',
                     }}
@@ -722,18 +769,13 @@ function CustomerPage() {
                     <div className="text-center text-base mb-2 text-gray-900">
                         {`दिनांक ${formattedDeliveryDateBill} को ${hindiDeliveryTimeBill} तक देना है।`}
                     </div>
-                    <div className="flex justify-between text-base mb-2 text-gray-900">
-                        <span>नाम: {customerName || ''}</span>
-                        <span>मो. नं. {customerMobile || ''}</span>
+                    <div className="flex justify-between text-base m-2 text-gray-900">
+                        <span className="flex-1 mr-4">नाम: {customerNameHindi || ''}</span>
+                        <span className="whitespace-nowrap">मो. नं. {customerMobile || ''}</span>
                     </div>
 
-                    <div>
-                        <table className="w-full border-collapse text-base"   
-                            style={{ 
-                                tableLayout: 'fixed', 
-                                width: '100%',
-                                borderCollapse: 'collapse'
-                            }}>
+                    <div className="w-full flex justify-center">
+                        <table className="w-[95%] border-collapse text-base">
                             <thead className="sticky top-0 bg-white">
                                 <tr>
                                     <th className="border border-gray-800 p-2 text-center font-bold" style={{ width: '8%' }}>
@@ -768,7 +810,7 @@ function CustomerPage() {
                                                 overflowWrap: 'break-word',
                                                 maxWidth: '0'
                                             }}>{row.left.serial}</td>
-                                        <td className="border border-gray-800 p-2 text-left text-gray-900"
+                                        <td className="border border-gray-800 p-2 text-center text-gray-900"
                                             style={{ 
                                                 width: '25%', 
                                                 whiteSpace: 'nowrap',
@@ -791,7 +833,7 @@ function CustomerPage() {
                                                 overflowWrap: 'break-word',
                                                 maxWidth: '0'
                                             }}>{row.right.serial}</td>
-                                        <td className="border border-gray-800 p-2 text-left text-gray-900"
+                                        <td className="border border-gray-800 p-2 text-center text-gray-900"
                                             style={{ 
                                                 width: '25%', 
                                                 whiteSpace: 'nowrap',
