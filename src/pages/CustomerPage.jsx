@@ -165,7 +165,7 @@ function CustomerPage() {
     useEffect(() => {
         const timer = setTimeout(() => {
             if (customerName && /[a-zA-Z]/.test(customerName)) {
-                // transliterateToHindi(customerName); // Commented out
+                transliterateToHindi(customerName);
             }
         }, 300);
 
@@ -183,8 +183,29 @@ function CustomerPage() {
             const response = await fetch(`${API_URL}/inventory/search?q=${encodeURIComponent(value)}`);
             if (!response.ok) throw new Error('Failed to search items');
             const data = await response.json();
-            setFilteredItems(data);
-            setHighlightedIndex(data.length > 0 ? 0 : -1);
+            
+            // Transliterate product names to Hindi
+            const transliteratedData = await Promise.all(data.map(async (item) => {
+                try {
+                    const response = await fetch(
+                        `https://inputtools.google.com/request?text=${encodeURIComponent(item.name)}&itc=hi-t-i0-und&num=1&cp=0&cs=1&ie=utf-8&oe=utf-8&app=demopage`
+                    );
+                    const data = await response.json();
+                    if (data && data[1] && data[1][0] && data[1][0][1]) {
+                        return {
+                            ...item,
+                            name: data[1][0][1][0] // Use the first Hindi suggestion
+                        };
+                    }
+                    return item;
+                } catch (error) {
+                    console.error('Transliteration error:', error);
+                    return item;
+                }
+            }));
+
+            setFilteredItems(transliteratedData);
+            setHighlightedIndex(transliteratedData.length > 0 ? 0 : -1);
         } catch (error) {
             console.error('Search error:', error);
             setFilteredItems([]);
