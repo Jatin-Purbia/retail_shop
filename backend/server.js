@@ -12,8 +12,8 @@ app.use(express.json());
 const db = mysql.createConnection({
   host: 'localhost',
   user: 'root',
-  password: 'jatin@0182', // Add your MySQL password here
-  database: 'retail_shop'
+  password: 'ADMIN', // Add your MySQL password here
+  database: 'RETAIL_SHOP'
 });
 
 // Connect to MySQL
