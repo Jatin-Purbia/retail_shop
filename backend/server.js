@@ -13,7 +13,7 @@ const db = mysql.createConnection({
   host: 'localhost',
   user: 'root',
   password: 'ADMIN', // Add your MySQL password here
-  database: 'RETAIL_SHOP'
+  database: 'retail_shop'
 });
 
 // Connect to MySQL
