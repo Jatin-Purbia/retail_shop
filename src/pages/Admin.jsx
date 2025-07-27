@@ -240,6 +240,7 @@ const Admin = () => {
                   <option value="गड्डी">गड्डी</option>
                   <option value="पैकेट">पैकेट</option>
                   <option value="नग">नग</option>
+                  <option value="पैकेट">लीटर</option> 
                 </select>
                 <div className="mt-4">
                   <button

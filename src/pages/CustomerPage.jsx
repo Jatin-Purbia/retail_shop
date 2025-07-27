@@ -122,6 +122,9 @@ function CustomerPage() {
     const [showHindiSuggestions, setShowHindiSuggestions] = useState(false);
     const [hindiSuggestions, setHindiSuggestions] = useState([]);
     const [highlightedHindiIndex, setHighlightedHindiIndex] = useState(-1);
+    const [editingItem, setEditingItem] = useState(null);
+    const [editQuantity, setEditQuantity] = useState(1);
+    const [editUnit, setEditUnit] = useState('कि.ग्रा.');
 
     useEffect(() => {
         localStorage.setItem('customerCart', JSON.stringify(cart));
@@ -563,6 +566,44 @@ function CustomerPage() {
         }
     };
 
+    const handleEditItem = (index) => {
+        const item = cart[index];
+        setEditingItem(index);
+        setEditQuantity(item.quantity);
+        setEditUnit(item.unit);
+    };
+
+    const handleSaveEdit = () => {
+        if (editingItem !== null) {
+            const updatedCart = [...cart];
+            updatedCart[editingItem] = {
+                ...updatedCart[editingItem],
+                quantity: editQuantity,
+                unit: editUnit,
+            };
+            setCart(updatedCart);
+            setEditingItem(null);
+            setEditQuantity(1);
+            setEditUnit('कि.ग्रा.');
+        }
+    };
+
+    const handleCancelEdit = () => {
+        setEditingItem(null);
+        setEditQuantity(1);
+        setEditUnit('कि.ग्रा.');
+    };
+
+    const handleDeleteItem = (index) => {
+        const updatedCart = cart.filter((_, i) => i !== index);
+        setCart(updatedCart);
+        if (editingItem === index) {
+            setEditingItem(null);
+            setEditQuantity(1);
+            setEditUnit('कि.ग्रा.');
+        }
+    };
+
     return (
         <div className="flex flex-col p-2 items-center justify-center min-h-screen bg-primary-light overflow-hidden">
             <div className="bg-white rounded-2xl shadow-2xl p-4 w-full max-w-7xl">
@@ -729,7 +770,8 @@ function CustomerPage() {
                                 <option value="ग्राम">ग्राम</option>
                                 <option value="पीपा">पीपा</option>
                                 <option value="गड्डी">गड्डी</option>
-                                <option value="पैकेट">पैकेट</option>
+                                <option value="पैकेट">पैकेट</option> 
+                                <option value="पैकेट">लीटर</option> 
                                 <option value="">None</option>
                             </select>
                         </div>
@@ -744,7 +786,8 @@ function CustomerPage() {
                     </div>
                 </div>
 
-                <div className="flex justify-end mb-2">
+                <div className="flex justify-between mb-4">
+                    <h2 className="text-xl font-bold text-primary">Cart Items ({cart.length})</h2>
                     <button
                         onClick={handleClearCart}
                         className="px-4 py-2 text-base bg-red-500 hover:bg-red-600 text-white rounded-lg font-semibold shadow transition"
@@ -752,6 +795,94 @@ function CustomerPage() {
                         Clear All
                     </button>
                 </div>
+
+                {cart.length > 0 && (
+                    <div className="mb-4 max-h-64 overflow-y-auto border border-gray-300 rounded-lg">
+                        <table className="w-full text-sm">
+                            <thead className="bg-gray-100 sticky top-0">
+                                <tr>
+                                    <th className="px-3 py-2 text-left font-semibold">S.No.</th>
+                                    <th className="px-3 py-2 text-left font-semibold">Product Name</th>
+                                    <th className="px-3 py-2 text-left font-semibold">Quantity</th>
+                                    <th className="px-3 py-2 text-left font-semibold">Unit</th>
+                                    <th className="px-3 py-2 text-center font-semibold">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {cart.map((item, index) => (
+                                    <tr key={`${item.id}-${item.unit}-${index}`} className="border-b hover:bg-gray-50">
+                                        <td className="px-3 py-2">{index + 1}</td>
+                                        <td className="px-3 py-2 font-medium">{item.name}</td>
+                                        <td className="px-3 py-2">
+                                            {editingItem === index ? (
+                                                <input
+                                                    type="number"
+                                                    value={editQuantity}
+                                                    onChange={(e) => setEditQuantity(Math.max(1, parseInt(e.target.value) || 1))}
+                                                    className="w-20 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-primary"
+                                                    min="1"
+                                                />
+                                            ) : (
+                                                item.quantity
+                                            )}
+                                        </td>
+                                        <td className="px-3 py-2">
+                                            {editingItem === index ? (
+                                                <select
+                                                    value={editUnit}
+                                                    onChange={(e) => setEditUnit(e.target.value)}
+                                                    className="w-24 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-primary"
+                                                >
+                                                    <option value="कि.ग्रा.">कि.ग्रा.</option>
+                                                    <option value="ग्राम">ग्राम</option>
+                                                    <option value="पीपा">पीपा</option>
+                                                    <option value="गड्डी">गड्डी</option>
+                                                    <option value="पैकेट">पैकेट</option>
+                                                    <option value="">None</option>
+                                                </select>
+                                            ) : (
+                                                item.unit
+                                            )}
+                                        </td>
+                                        <td className="px-3 py-2 text-center">
+                                            {editingItem === index ? (
+                                                <div className="flex gap-1 justify-center">
+                                                    <button
+                                                        onClick={handleSaveEdit}
+                                                        className="px-2 py-1 text-xs bg-green-500 hover:bg-green-600 text-white rounded font-semibold transition"
+                                                    >
+                                                        Save
+                                                    </button>
+                                                    <button
+                                                        onClick={handleCancelEdit}
+                                                        className="px-2 py-1 text-xs bg-gray-500 hover:bg-gray-600 text-white rounded font-semibold transition"
+                                                    >
+                                                        Cancel
+                                                    </button>
+                                                </div>
+                                            ) : (
+                                                <div className="flex gap-1 justify-center">
+                                                    <button
+                                                        onClick={() => handleEditItem(index)}
+                                                        className="px-2 py-1 text-xs bg-blue-500 hover:bg-blue-600 text-white rounded font-semibold transition"
+                                                    >
+                                                        Edit
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleDeleteItem(index)}
+                                                        className="px-2 py-1 text-xs bg-red-500 hover:bg-red-600 text-white rounded font-semibold transition"
+                                                    >
+                                                        Delete
+                                                    </button>
+                                                </div>
+                                            )}
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
 
                 <div
                     ref={billRef}
