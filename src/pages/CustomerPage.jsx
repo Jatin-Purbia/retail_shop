@@ -29,65 +29,89 @@ function formatDate(date = new Date()) {
 }
 
 // Helper to generate two-column table rows with pagination
-function generateTwoColumnTable(cart, page = 0) {
-    const ITEMS_PER_PAGE = 50; // Maximum items per page
-    const startIdx = page * ITEMS_PER_PAGE;
-    const pageItems = [...cart].reverse().slice(startIdx, startIdx + ITEMS_PER_PAGE);
+// function generateTwoColumnTable(cart, page = 0) {
+//     const ITEMS_PER_PAGE = 50; // Maximum items per page
+//     const startIdx = page * ITEMS_PER_PAGE;
+//     const pageItems = [...cart].reverse().slice(startIdx, startIdx + ITEMS_PER_PAGE);
 
-    // Calculate number of rows needed based on content
-    const rows = [];
-    let currentRow = { left: {}, right: {} };
-    let leftSideFilled = false;
-    let rightSideIndex = 0; // Track the current row index for right side
+//     // Calculate number of rows needed based on content
+//     const rows = [];
+//     let currentRow = { left: {}, right: {} };
+//     let leftSideFilled = false;
+//     let rightSideIndex = 0; // Track the current row index for right side
     
-    // First, fill the left side completely
-    for (let i = 0; i < pageItems.length; i++) {
-        const item = pageItems[i];
-        const serialNumber = startIdx + i + 1;
+//     // First, fill the left side completely
+//     for (let i = 0; i < pageItems.length; i++) {
+//         const item = pageItems[i];
+//         const serialNumber = startIdx + i + 1;
         
-        if (!leftSideFilled) {
-            // Fill left side first
-            currentRow = {
-                left: {
-                    serial: `${serialNumber}`,
-                    name: item.name,
-                    quantity: `${item.quantity} ${item.unit}`,
-                },
-                right: {}
-            };
-            rows.push(currentRow);
+//         if (!leftSideFilled) {
+//             // Fill left side first
+//             currentRow = {
+//                 left: {
+//                     serial: `${serialNumber}`,
+//                     name: item.name,
+//                     quantity: `${item.quantity} ${item.unit}`,
+//                 },
+//                 right: {}
+//             };
+//             rows.push(currentRow);
             
-            // Check if we've filled the left side
-            if (rows.length >= 14) {
-                leftSideFilled = true;
-                break; // Stop after filling left side
-            }
-        }
-    }
+//             // Check if we've filled the left side
+//             if (rows.length >= 14) {
+//                 leftSideFilled = true;
+//                 break; // Stop after filling left side
+//             }
+//         }
+//     }
 
-    // Then, fill the right side completely
-    for (let i = rows.length; i < pageItems.length; i++) {
-        const item = pageItems[i];
-        const serialNumber = startIdx + i + 1;
+//     // Then, fill the right side completely
+//     for (let i = rows.length; i < pageItems.length; i++) {
+//         const item = pageItems[i];
+//         const serialNumber = startIdx + i + 1;
         
-        if (rightSideIndex < rows.length) {
-            rows[rightSideIndex].right = {
-                serial: `${serialNumber}`,
-                name: item.name,
-                quantity: `${item.quantity} ${item.unit}`,
-            };
-            rightSideIndex++;
-        }
-    }
+//         if (rightSideIndex < rows.length) {
+//             rows[rightSideIndex].right = {
+//                 serial: `${serialNumber}`,
+//                 name: item.name,
+//                 quantity: `${item.quantity} ${item.unit}`,
+//             };
+//             rightSideIndex++;
+//         }
+//     }
 
-    // If we have empty rows on the right side, fill them with empty cells
-    while (rightSideIndex < rows.length) {
-        rows[rightSideIndex].right = {
-            serial: '',
-            name: '',
-            quantity: '',
-        };
-        rightSideIndex++;
+//     // If we have empty rows on the right side, fill them with empty cells
+//     while (rightSideIndex < rows.length) {
+//         rows[rightSideIndex].right = {
+//             serial: '',
+//             name: '',
+//             quantity: '',
+//         };
+//         rightSideIndex++;
+//     }
+
+//     return rows;
+// }
+function generateTwoColumnTable(cart) {
+    const ROWS_PER_SIDE = 25; // Fixed 25 rows per side
+    const rows = [];
+    const cartItems = [...cart].reverse(); // Reverse to show newest items first
+
+    // Create exactly 25 rows, whether we have items or not
+    for (let i = 0; i < ROWS_PER_SIDE; i++) {
+        rows.push({
+            left: {
+                serial: i < cartItems.length ? (i + 1).toString() : '',
+                name: i < cartItems.length ? cartItems[i].name : '',
+                quantity: i < cartItems.length ? `${cartItems[i].quantity} ${cartItems[i].unit}` : ''
+            },
+            right: {
+                serial: i + ROWS_PER_SIDE < cartItems.length ? (i + ROWS_PER_SIDE + 1).toString() : '',
+                name: i + ROWS_PER_SIDE < cartItems.length ? cartItems[i + ROWS_PER_SIDE].name : '',
+                quantity: i + ROWS_PER_SIDE < cartItems.length ? 
+                    `${cartItems[i + ROWS_PER_SIDE].quantity} ${cartItems[i + ROWS_PER_SIDE].unit}` : ''
+            }
+        });
     }
 
     return rows;
@@ -345,105 +369,51 @@ function CustomerPage() {
         setDeliveryTimeHindi(event.target.value);
     };
 
-    const handleExportPDF = async () => {
-        if (cart.length === 0) {
-            alert('Your cart is empty. Add items to export.');
-            return;
-        }
-        const input = billRef.current;
-        if (!input) return;
+const handleExportPDF = async () => {
+    if (cart.length === 0) {
+        alert('Your cart is empty. Add items to export.');
+        return;
+    }
+    const input = billRef.current;
+    if (!input) return;
 
-        // Create PDF
-        const pdf = new jsPDF({
-            orientation: 'portrait',
-            unit: 'pt',
-            format: 'a4',
-        });
+    // Create PDF with A4 dimensions (595.28 x 841.89) points
+    const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',  // Changed to mm
+        format: 'a4',
+        compress: true
+    });
 
-        // Calculate total pages needed (30 items per page, but must fill both sides)
-        const itemsPerPage = 50; // 15 rows * 2 columns
-        const totalPages = Math.ceil(cart.length / itemsPerPage);
-        const originalContent = input.innerHTML;
-
-        // Generate each page
-        for (let page = 0; page < totalPages; page++) {
-            if (page > 0) {
-                pdf.addPage();
+    // Configure html2canvas for better quality
+    const canvas = await html2canvas(input, {
+        scale: 2, // Increase scale for better quality
+        useCORS: true,
+        logging: false,
+        windowWidth: 794, // Match A4 width
+        windowHeight: 1123, // Match A4 height
+        onclone: (document) => {
+            // Adjust clone document styles if needed
+            const element = document.getElementById(input.id);
+            if (element) {
+                element.style.width = '794px';
+                element.style.height = '1123px';
+                // Ensure table takes full height
+                const table = element.querySelector('table');
+                if (table) {
+                    table.style.height = 'calc(100% - 120px)'; // Adjust for header space
+                }
             }
-
-            // Generate table for this page
-            const pageItems = generateTwoColumnTable(cart, page);
-            
-            // Create page HTML
-            const pageHTML = `
-                <div style="font-family: DejaVu Sans, Arial, sans-serif; padding-right: 20px; color: #222; width: 794px; margin: 0 auto; display: flex; flex-direction: column; align-items: center;">
-                    <div style="text-align: center; font-weight: bold; font-size: 20px; margin-bottom: 8px; width: 100%;">! श्री राम जी !!</div>
-                    <div style="text-align: center; font-size: 16px; margin-bottom: 8px; width: 100%;">
-                        ${`दिनांक ${formattedDeliveryDateBill} को ${hindiDeliveryTimeBill} तक देना है।`}
-                    </div>
-                    <div style="display: flex; justify-content: space-between; font-size: 16px; margin-bottom: 12px; padding: 0 20px; width: 100%;">
-                        <span style="flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">नाम: ${customerNameHindi || ''}</span>
-                        <span style="white-space: nowrap; flex-shrink: 0;">मो. नं. ${customerMobile || ''}</span>
-                    </div>
-                    <div style="width: 100%; display: flex; justify-content: center;">
-                        <table style="width: 95%; border-collapse: collapse; font-size: 16px;">
-                            <thead>
-                                <tr>
-                                    <th style="border: 1px solid #000; padding: 8px; text-align: center; width: 8%;">क्रम संख्या</th>
-                                    <th style="border: 1px solid #000; padding: 8px; text-align: center; width: 25%;">उत्पाद</th>
-                                    <th style="border: 1px solid #000; padding: 8px; text-align: center; width: 8%;">मात्रा</th>
-                                    <th style="border: 1px solid #000; padding: 8px; width: 9%;"></th>
-                                    <th style="border: 1px solid #000; padding: 8px; text-align: center; width: 8%;">क्रम संख्या</th>
-                                    <th style="border: 1px solid #000; padding: 8px; text-align: center; width: 25%;">उत्पाद</th>
-                                    <th style="border: 1px solid #000; padding: 8px; text-align: center; width: 8%;">मात्रा</th>
-                                    <th style="border: 1px solid #000; padding: 8px; width: 9%;"></th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                ${pageItems.map((row, idx) => `
-                                    <tr>
-                                        <td style="border: 1px solid #000; font-size: 14px; padding-bottom: 4px; text-align: center;">${row.left.serial}</td>
-                                        <td style="border: 1px solid #000; font-size: 14px; padding-bottom: 4px; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 0;" title="${row.left.name}">${row.left.name}</td>
-                                        <td style="border: 1px solid #000; font-size: 14px; padding-bottom: 4px; text-align: center;">${row.left.quantity}</td>
-                                        <td style="border: 1px solid #000; font-size: 14px; padding-bottom: 4px;"></td>
-                                        <td style="border: 1px solid #000; font-size: 14px; padding-bottom: 4px; text-align: center;">${row.right.serial}</td>
-                                        <td style="border: 1px solid #000; font-size: 14px; padding-bottom: 4px; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 0;" title="${row.right.name}">${row.right.name}</td>
-                                        <td style="border: 1px solid #000; font-size: 14px; padding-bottom: 4px; text-align: center;">${row.right.quantity}</td>
-                                        <td style="border: 1px solid #000; font-size: 14px; padding-bottom: 4px;"></td>
-                                    </tr>
-                                `).join('')}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            `;
-
-            // Replace the content
-            input.innerHTML = pageHTML;
-
-            // Generate canvas for this page
-            const canvas = await html2canvas(input, { scale: 2 });
-            const imgData = canvas.toDataURL('image/png');
-            
-            // Add image to PDF
-            const pdfWidth = pdf.internal.pageSize.getWidth();
-            const pdfHeight = pdf.internal.pageSize.getHeight();
-            const imgProps = {
-                width: canvas.width,
-                height: canvas.height,
-            };
-            const ratio = Math.min(pdfWidth / imgProps.width, pdfHeight / imgProps.height);
-            const imgWidth = imgProps.width * ratio;
-            const imgHeight = imgProps.height * ratio;
-            pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
         }
+    });
 
-        // Save the PDF
-        pdf.save(`bill_${customerName || 'guest'}_${formatDate()}.pdf`);
+    // Convert to image and add to PDF at exact A4 dimensions
+    const imgData = canvas.toDataURL('image/jpeg', 1.0);
+    pdf.addImage(imgData, 'JPEG', 0, 0, 210, 297); // A4 dimensions in mm
 
-        // Restore original content
-        input.innerHTML = originalContent;
-    };
+    // Save the PDF
+    pdf.save(`bill_${customerName || 'guest'}_${formatDate()}.pdf`);
+};
 
     // const handleExportExcel = () => {
     //     if (cart.length === 0) {
@@ -811,7 +781,7 @@ function CustomerPage() {
                             <tbody>
                                 {cart.map((item, index) => (
                                     <tr key={`${item.id}-${item.unit}-${index}`} className="border-b hover:bg-gray-50">
-                                        <td className="px-3 py-2">{index + 1}</td>
+                                        <td className="px-3 py-2">{cart.length - index}</td>
                                         <td className="px-3 py-2 font-medium">{item.name}</td>
                                         <td className="px-3 py-2">
                                             {editingItem === index ? (
@@ -890,10 +860,12 @@ function CustomerPage() {
                     style={{
                         fontFamily: 'DejaVu Sans, Arial, sans-serif',
                         color: '#222',
-                        width: '794px',
-                        maxHeight: '1123px',
+                        width: '794px', // A4 width
+                        height: '1123px', // A4 height
                         maxWidth: '794px',
                         margin: '0 auto',
+                        display: 'flex',
+                        flexDirection: 'column'
                     }}
                 >
                     <div className="text-center font-bold text-xl mb-2 text-gray-900">! श्री राम जी !!</div>
@@ -905,92 +877,101 @@ function CustomerPage() {
                         <span className="whitespace-nowrap">मो. नं. {customerMobile || ''}</span>
                     </div>
 
-                    <div className="w-full flex justify-center">
-                        <table className="w-[95%] border-collapse text-base">
-                            <thead className="sticky top-0 bg-white">
-                                <tr>
-                                    <th className="border border-gray-800 p-2 text-center font-bold" style={{ width: '8%' }}>
-                                        क्रम संख्या
-                                    </th>
-                                    <th className="border border-gray-800 p-2 text-center font-bold" style={{ width: '25%' }}>
-                                        उत्पाद
-                                    </th>
-                                    <th className="border border-gray-800 p-2 text-center font-bold" style={{ width: '8%' }}>
-                                        मात्रा
-                                    </th>
-                                    <th className="border border-gray-800 p-2" style={{ width: '9%' }}></th>
-                                    <th className="border border-gray-800 p-2 text-center font-bold" style={{ width: '8%' }}>
-                                        क्रम संख्या
-                                    </th>
-                                    <th className="border border-gray-800 p-2 text-center font-bold" style={{ width: '25%' }}>
-                                        उत्पाद
-                                    </th>
-                                    <th className="border border-gray-800 p-2 text-center font-bold" style={{ width: '8%' }}>
-                                        मात्रा
-                                    </th>
-                                    <th className="border border-gray-800 p-2" style={{ width: '9%' }}></th>
+                   <div className="w-full flex-1 flex justify-center">
+                    <table className="w-[95%] border-collapse text-base h-full">
+                        <thead>
+                            <tr>
+                                <th className="border border-gray-800 p-2 text-center font-bold" style={{ width: '6%' }}>
+                                    क्रम संख्या
+                                </th>
+                                <th className="border border-gray-800 p-2 text-center font-bold" style={{ width: '22%' }}>
+                                    उत्पाद
+                                </th>
+                                <th className="border border-gray-800 p-2 text-center font-bold" style={{ width: '12%' }}>
+                                    मात्रा
+                                </th>
+                                <th className="border border-gray-800 p-2" style={{ width: '5%' }}></th>
+                                <th className="border border-gray-800 p-2 text-center font-bold" style={{ width: '6%' }}>
+                                    क्रम संख्या
+                                </th>
+                                <th className="border border-gray-800 p-2 text-center font-bold" style={{ width: '22%' }}>
+                                    उत्पाद
+                                </th>
+                                <th className="border border-gray-800 p-2 text-center font-bold" style={{ width: '12%' }}>
+                                    मात्रा
+                                </th>
+                                <th className="border border-gray-800 p-2" style={{ width: '5%' }}></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {Array.from({ length: 25 }).map((_, idx) => (
+                                <tr key={idx} style={{ 
+                                    height: '32px', // Fixed height for consistent 25 rows
+                                }}>
+                                    <td className="border border-gray-800 text-center text-gray-900"
+                                        style={{ 
+                                            width: '6%',
+                                            padding: '5px 4px',
+                                            fontSize: '14px',
+                                            verticalAlign: 'middle'
+                                        }}>{billItems[idx]?.left?.serial || ''}</td>
+                                    <td className="border border-gray-800 text-center text-gray-900"
+                                        style={{ 
+                                            width: '22%',
+                                            padding: '5px 4px',
+                                            fontSize: '14px',
+                                            whiteSpace: 'nowrap',
+                                            overflow: 'hidden',
+                                            textOverflow: 'ellipsis',
+                                            verticalAlign: 'middle'
+                                        }}>{billItems[idx]?.left?.name || ''}</td>
+                                    <td className="border border-gray-800 text-center text-gray-900"
+                                        style={{ 
+                                            width: '12%',
+                                            padding: '5px 4px',
+                                            fontSize: '14px',
+                                            verticalAlign: 'middle'
+                                        }}>{billItems[idx]?.left?.quantity || ''}</td>
+                                    <td className="border border-gray-800"
+                                        style={{ 
+                                            width: '5%',
+                                            padding: '5px 4px'
+                                        }}></td>
+                                    {/* Right side columns with same widths */}
+                                    <td className="border border-gray-800 text-center text-gray-900"
+                                        style={{ 
+                                            width: '6%',
+                                            padding: '5px 4px',
+                                            fontSize: '14px',
+                                            verticalAlign: 'middle'
+                                        }}>{billItems[idx]?.right?.serial || ''}</td>
+                                    <td className="border border-gray-800 text-center text-gray-900"
+                                        style={{ 
+                                            width: '22%',
+                                            padding: '5px 4px',
+                                            fontSize: '14px',
+                                            whiteSpace: 'nowrap',
+                                            overflow: 'hidden',
+                                            textOverflow: 'ellipsis',
+                                            verticalAlign: 'middle'
+                                        }}>{billItems[idx]?.right?.name || ''}</td>
+                                    <td className="border border-gray-800 text-center text-gray-900"
+                                        style={{ 
+                                            width: '12%',
+                                            padding: '5px 4px',
+                                            fontSize: '14px',
+                                            verticalAlign: 'middle'
+                                        }}>{billItems[idx]?.right?.quantity || ''}</td>
+                                    <td className="border border-gray-800"
+                                        style={{ 
+                                            width: '5%',
+                                            padding: '5px 4px'
+                                        }}></td>
                                 </tr>
-                            </thead>
-                            <tbody>
-                                {billItems.map((row, idx) => (
-                                    <tr key={idx} style={{ height: 'auto' }}>
-                                        <td className="border border-gray-800 p-2 text-center text-gray-900"           
-                                            style={{ 
-                                                width: '8%', 
-                                                wordBreak: 'break-word', 
-                                                overflowWrap: 'break-word',
-                                                fontSize: '14px',
-                                                maxWidth: '0'
-                                            }}>{row.left.serial}</td>
-                                        <td className="border border-gray-800 p-2 text-center text-gray-900"
-                                            style={{ 
-                                                width: '25%', 
-                                                whiteSpace: 'nowrap',
-                                                overflow: 'hidden',
-                                                fontSize: '14px',
-                                                textOverflow: 'ellipsis',
-                                                maxWidth: '0'
-                                            }} title={row.left.name}>{row.left.name}</td>
-                                        <td className="border border-gray-800 p-2 text-center text-gray-900"
-                                            style={{ 
-                                                width: '8%', 
-                                                wordBreak: 'break-word', 
-                                                overflowWrap: 'break-word',
-                                                fontSize: '14px',
-                                                maxWidth: '0'
-                                            }}>{row.left.quantity}</td>
-                                        <td className="border border-gray-800 p-2" style={{ width: '9%' }}></td>
-                                        <td className="border border-gray-800 p-2 text-center text-gray-900"
-                                            style={{ 
-                                                width: '8%', 
-                                                wordBreak: 'break-word', 
-                                                overflowWrap: 'break-word',
-                                                fontSize: '14px',
-                                                maxWidth: '0'
-                                            }}>{row.right.serial}</td>
-                                        <td className="border border-gray-800 p-2 text-center text-gray-900"
-                                            style={{ 
-                                                width: '25%', 
-                                                whiteSpace: 'nowrap',
-                                                overflow: 'hidden',
-                                                textOverflow: 'ellipsis',
-                                                fontSize: '14px',
-                                                maxWidth: '0'
-                                            }} title={row.right.name}>{row.right.name}</td>
-                                        <td className="border border-gray-800 p-2 text-center text-gray-900"
-                                            style={{ 
-                                                width: '8%', 
-                                                wordBreak: 'break-word', 
-                                                overflowWrap: 'break-word',
-                                                fontSize: '14px',
-                                                maxWidth: '0'
-                                            }}>{row.right.quantity}</td>
-                                        <td className="border border-gray-800 p-2" style={{ width: '9%' }}></td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
                 </div>
 
                 {totalPages > 1 && (
