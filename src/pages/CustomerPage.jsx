@@ -872,7 +872,7 @@ const handleExportPDF = async () => {
                     <div className="text-center text-base mb-2 text-gray-900">
                         {`दिनांक ${formattedDeliveryDateBill} को ${hindiDeliveryTimeBill} तक देना है।`}
                     </div>
-                    <div className="flex justify-between text-base m-2 text-gray-900">
+                    <div className="flex justify-between text-base m-2 mb-2 text-gray-900">
                         <span className="flex-1 mr-4">नाम: {customerNameHindi || ''}</span>
                         <span className="whitespace-nowrap">मो. नं. {customerMobile || ''}</span>
                     </div>
