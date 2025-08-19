@@ -101,13 +101,13 @@ function generateTwoColumnTable(cart) {
     for (let i = 0; i < ROWS_PER_SIDE; i++) {
         rows.push({
             left: {
-                serial: i < cartItems.length ? (i + 1).toString() : '',
                 name: i < cartItems.length ? cartItems[i].name : '',
+                amount: i < cartItems.length ? cartItems[i].amount || '' : '',
                 quantity: i < cartItems.length ? `${cartItems[i].quantity} ${cartItems[i].unit}` : ''
             },
             right: {
-                serial: i + ROWS_PER_SIDE < cartItems.length ? (i + ROWS_PER_SIDE + 1).toString() : '',
                 name: i + ROWS_PER_SIDE < cartItems.length ? cartItems[i + ROWS_PER_SIDE].name : '',
+                amount: i + ROWS_PER_SIDE < cartItems.length ? cartItems[i + ROWS_PER_SIDE].amount || '' : '',
                 quantity: i + ROWS_PER_SIDE < cartItems.length ? 
                     `${cartItems[i + ROWS_PER_SIDE].quantity} ${cartItems[i + ROWS_PER_SIDE].unit}` : ''
             }
@@ -741,7 +741,8 @@ const handleExportPDF = async () => {
                                 <option value="पीपा">पीपा</option>
                                 <option value="गड्डी">गड्डी</option>
                                 <option value="पैकेट">पैकेट</option> 
-                                <option value="पैकेट">लीटर</option> 
+                                <option value="लीटर">लीटर</option> 
+                                <option value="बोतल">बोतल</option>
                                 <option value="">None</option>
                             </select>
                         </div>
@@ -881,26 +882,25 @@ const handleExportPDF = async () => {
                     <table className="w-[95%] border-collapse text-base h-full">
                         <thead>
                             <tr>
-                                <th className="border border-gray-800 p-2 text-center font-bold" style={{ width: '6%' }}>
-                                    क्रम संख्या
-                                </th>
-                                <th className="border border-gray-800 p-2 text-center font-bold" style={{ width: '22%' }}>
+                                <th className="border border-gray-800 p-2 text-center font-bold" style={{ width: '20%' }}>
                                     उत्पाद
                                 </th>
-                                <th className="border border-gray-800 p-2 text-center font-bold" style={{ width: '12%' }}>
+                                <th className="border border-gray-800 p-2 text-center font-bold" style={{ width: '14%' }}>
                                     मात्रा
                                 </th>
-                                <th className="border border-gray-800 p-2" style={{ width: '5%' }}></th>
-                                <th className="border border-gray-800 p-2 text-center font-bold" style={{ width: '6%' }}>
-                                    क्रम संख्या
+                                <th className="border border-gray-800 p-2 text-center font-bold" style={{ width: '14%' }}>
+                                    राशि
                                 </th>
-                                <th className="border border-gray-800 p-2 text-center font-bold" style={{ width: '22%' }}>
+                                <th className="border border-gray-800 p-2" style={{ width: '4%' }}></th>
+                                <th className="border border-gray-800 p-2 text-center font-bold" style={{ width: '20%' }}>
                                     उत्पाद
                                 </th>
-                                <th className="border border-gray-800 p-2 text-center font-bold" style={{ width: '12%' }}>
+                                <th className="border border-gray-800 p-2 text-center font-bold" style={{ width: '14%' }}>
                                     मात्रा
                                 </th>
-                                <th className="border border-gray-800 p-2" style={{ width: '5%' }}></th>
+                                <th className="border border-gray-800 p-2 text-center font-bold" style={{ width: '14%' }}>
+                                    राशि
+                                </th>
                             </tr>
                         </thead>
                         <tbody>
@@ -910,14 +910,7 @@ const handleExportPDF = async () => {
                                 }}>
                                     <td className="border border-gray-800 text-center text-gray-900"
                                         style={{ 
-                                            width: '6%',
-                                            padding: '5px 4px',
-                                            fontSize: '14px',
-                                            verticalAlign: 'middle'
-                                        }}>{billItems[idx]?.left?.serial || ''}</td>
-                                    <td className="border border-gray-800 text-center text-gray-900"
-                                        style={{ 
-                                            width: '22%',
+                                            width: '20%',
                                             padding: '5px 4px',
                                             fontSize: '14px',
                                             whiteSpace: 'nowrap',
@@ -927,27 +920,27 @@ const handleExportPDF = async () => {
                                         }}>{billItems[idx]?.left?.name || ''}</td>
                                     <td className="border border-gray-800 text-center text-gray-900"
                                         style={{ 
-                                            width: '12%',
+                                            width: '14%',
                                             padding: '5px 4px',
                                             fontSize: '14px',
                                             verticalAlign: 'middle'
                                         }}>{billItems[idx]?.left?.quantity || ''}</td>
+                                    <td className="border border-gray-800 text-center text-gray-900"
+                                        style={{ 
+                                            width: '14%',
+                                            padding: '5px 4px',
+                                            fontSize: '14px',
+                                            verticalAlign: 'middle'
+                                        }}>{billItems[idx]?.left?.amount || ''}</td>
                                     <td className="border border-gray-800"
                                         style={{ 
-                                            width: '5%',
+                                            width: '4%',
                                             padding: '5px 4px'
                                         }}></td>
                                     {/* Right side columns with same widths */}
                                     <td className="border border-gray-800 text-center text-gray-900"
                                         style={{ 
-                                            width: '6%',
-                                            padding: '5px 4px',
-                                            fontSize: '14px',
-                                            verticalAlign: 'middle'
-                                        }}>{billItems[idx]?.right?.serial || ''}</td>
-                                    <td className="border border-gray-800 text-center text-gray-900"
-                                        style={{ 
-                                            width: '22%',
+                                            width: '20%',
                                             padding: '5px 4px',
                                             fontSize: '14px',
                                             whiteSpace: 'nowrap',
@@ -957,16 +950,18 @@ const handleExportPDF = async () => {
                                         }}>{billItems[idx]?.right?.name || ''}</td>
                                     <td className="border border-gray-800 text-center text-gray-900"
                                         style={{ 
-                                            width: '12%',
+                                            width: '14%',
                                             padding: '5px 4px',
                                             fontSize: '14px',
                                             verticalAlign: 'middle'
                                         }}>{billItems[idx]?.right?.quantity || ''}</td>
-                                    <td className="border border-gray-800"
+                                    <td className="border border-gray-800 text-center text-gray-900"
                                         style={{ 
-                                            width: '5%',
-                                            padding: '5px 4px'
-                                        }}></td>
+                                            width: '14%',
+                                            padding: '5px 4px',
+                                            fontSize: '14px',
+                                            verticalAlign: 'middle'
+                                        }}>{billItems[idx]?.right?.amount || ''}</td>
                                 </tr>
                             ))}
                         </tbody>
