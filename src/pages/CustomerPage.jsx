@@ -633,7 +633,18 @@ const handleExportPDF = async () => {
 
     const handleDeleteItem = (index) => {
         const updatedCart = cart.filter((_, i) => i !== index);
+        // Calculate new total pages after deletion
+        const ROWS_PER_SIDE = 23;
+        const ITEMS_PER_PAGE = ROWS_PER_SIDE * 2;
+        const newTotalPages = Math.ceil(updatedCart.length / ITEMS_PER_PAGE);
+        // If current page is now out of range, shift to previous page
         setCart(updatedCart);
+        setCurrentPage((prevPage) => {
+            if (prevPage >= newTotalPages && newTotalPages > 0) {
+                return newTotalPages - 1;
+            }
+            return prevPage;
+        });
         if (editingItem === index) {
             setEditingItem(null);
             setEditQuantity(1);
