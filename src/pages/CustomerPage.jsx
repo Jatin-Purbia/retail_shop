@@ -92,28 +92,28 @@ function formatDate(date = new Date()) {
 
 //     return rows;
 // }
-function generateTwoColumnTable(cart) {
-    const ROWS_PER_SIDE = 25; // Fixed 25 rows per side
+function generateTwoColumnTable(cart, page = 0) {
+    const ROWS_PER_SIDE = 23; // 23 rows per side, 46 items per page
+    const ITEMS_PER_PAGE = ROWS_PER_SIDE * 2;
+    const cartItems = [...cart].reverse(); // Newest first
+    const startIdx = page * ITEMS_PER_PAGE;
+    const pageItems = cartItems.slice(startIdx, startIdx + ITEMS_PER_PAGE);
     const rows = [];
-    const cartItems = [...cart].reverse(); // Reverse to show newest items first
-
-    // Create exactly 25 rows, whether we have items or not
     for (let i = 0; i < ROWS_PER_SIDE; i++) {
         rows.push({
             left: {
-                name: i < cartItems.length ? cartItems[i].name : '',
-                amount: i < cartItems.length ? cartItems[i].amount || '' : '',
-                quantity: i < cartItems.length ? `${cartItems[i].quantity} ${cartItems[i].unit}` : ''
+                name: i < pageItems.length ? pageItems[i].name : '',
+                amount: i < pageItems.length ? pageItems[i].amount || '' : '',
+                quantity: i < pageItems.length ? `${pageItems[i].quantity} ${pageItems[i].unit}` : ''
             },
             right: {
-                name: i + ROWS_PER_SIDE < cartItems.length ? cartItems[i + ROWS_PER_SIDE].name : '',
-                amount: i + ROWS_PER_SIDE < cartItems.length ? cartItems[i + ROWS_PER_SIDE].amount || '' : '',
-                quantity: i + ROWS_PER_SIDE < cartItems.length ? 
-                    `${cartItems[i + ROWS_PER_SIDE].quantity} ${cartItems[i + ROWS_PER_SIDE].unit}` : ''
+                name: i + ROWS_PER_SIDE < pageItems.length ? pageItems[i + ROWS_PER_SIDE].name : '',
+                amount: i + ROWS_PER_SIDE < pageItems.length ? pageItems[i + ROWS_PER_SIDE].amount || '' : '',
+                quantity: i + ROWS_PER_SIDE < pageItems.length ? 
+                    `${pageItems[i + ROWS_PER_SIDE].quantity} ${pageItems[i + ROWS_PER_SIDE].unit}` : ''
             }
         });
     }
-
     return rows;
 }
 
@@ -374,44 +374,111 @@ const handleExportPDF = async () => {
         alert('Your cart is empty. Add items to export.');
         return;
     }
-    const input = billRef.current;
-    if (!input) return;
 
-    // Create PDF with A4 dimensions (595.28 x 841.89) points
+    const ROWS_PER_SIDE = 23;
+    const ITEMS_PER_PAGE = ROWS_PER_SIDE * 2;
+    const totalPages = Math.ceil(cart.length / ITEMS_PER_PAGE);
+
     const pdf = new jsPDF({
         orientation: 'portrait',
-        unit: 'mm',  // Changed to mm
+        unit: 'mm',
         format: 'a4',
         compress: true
     });
 
-    // Configure html2canvas for better quality
-    const canvas = await html2canvas(input, {
-        scale: 2, // Increase scale for better quality
-        useCORS: true,
-        logging: false,
-        windowWidth: 794, // Match A4 width
-        windowHeight: 1123, // Match A4 height
-        onclone: (document) => {
-            // Adjust clone document styles if needed
-            const element = document.getElementById(input.id);
-            if (element) {
-                element.style.width = '794px';
-                element.style.height = '1123px';
-                // Ensure table takes full height
-                const table = element.querySelector('table');
-                if (table) {
-                    table.style.height = 'calc(100% - 120px)'; // Adjust for header space
-                }
-            }
+    // Helper to render a bill page in a hidden div
+    const renderBillPage = (pageIdx) => {
+        // Create a container
+        const container = document.createElement('div');
+        container.style.position = 'fixed';
+        container.style.left = '-9999px';
+        container.style.top = '0';
+        container.style.width = '794px';
+        container.style.height = '1123px';
+        container.style.background = '#fff';
+        container.style.zIndex = '-1';
+        document.body.appendChild(container);
+
+        // Generate billItems for this page
+        const billItems = generateTwoColumnTable(cart, pageIdx);
+
+        // Build the HTML for the bill (copy from your JSX, but as HTML string)
+        // For brevity, only the table and key info are rendered
+        const formattedDeliveryDateBill = formatDate(deliveryDate);
+        const timeMappingBill = { सुबह: 'सुबह', दोपहर: 'दोपहर', शाम: 'शाम' };
+        const hindiDeliveryTimeBill = timeMappingBill[deliveryTimeHindi] || '';
+        let tableRows = '';
+        for (let idx = 0; idx < 23; idx++) {
+            tableRows += `
+                <tr style="height:32px;">
+                    <td style="border:1px solid #222;text-align:center;width:20%;font-size:14px;">${billItems[idx]?.left?.name || ''}</td>
+                    <td style="border:1px solid #222;text-align:center;width:14%;font-size:14px;">${billItems[idx]?.left?.quantity || ''}</td>
+                    <td style="border:1px solid #222;text-align:center;width:14%;font-size:14px;">${billItems[idx]?.left?.amount || ''}</td>
+                    <td style="border:1px solid #222;width:4%;"></td>
+                    <td style="border:1px solid #222;text-align:center;width:20%;font-size:14px;">${billItems[idx]?.right?.name || ''}</td>
+                    <td style="border:1px solid #222;text-align:center;width:14%;font-size:14px;">${billItems[idx]?.right?.quantity || ''}</td>
+                    <td style="border:1px solid #222;text-align:center;width:14%;font-size:14px;">${billItems[idx]?.right?.amount || ''}</td>
+                </tr>
+            `;
         }
-    });
+        // Gap row and total row
+        tableRows += `
+            <tr style="height:18px;background:#fff;"><td colspan="7" style="border:none;background:#fff;"></td></tr>
+            <tr style="height:32px;background:#f3f4f6;">
+                <td colspan="3" style="border:1px solid #222;text-align:right;font-weight:bold;font-size:18px;background:#f3f4f6;padding-right:24px;padding-bottom:10px;">कुल राशि:</td>
+                <td style="border:1px solid #222;background:#f3f4f6;"></td>
+                <td colspan="3" style="border:1px solid #222;text-align:left;font-weight:bold;font-size:18px;background:#f3f4f6;"></td>
+            </tr>
+        `;
 
-    // Convert to image and add to PDF at exact A4 dimensions
-    const imgData = canvas.toDataURL('image/jpeg', 1.0);
-    pdf.addImage(imgData, 'JPEG', 0, 0, 210, 297); // A4 dimensions in mm
+        container.innerHTML = `
+            <div style="font-family:DejaVu Sans,Arial,sans-serif;color:#222;width:758px;height:1087px;max-width:758px;margin:0 auto;display:flex;flex-direction:column;padding:18px 18px 18px 18px;box-sizing:border-box;">
+                <div style="text-align:center;font-weight:bold;font-size:24px;margin-bottom:8px;">! श्री राम जी !!</div>
+                <div style="text-align:center;font-size:16px;margin-bottom:8px;">दिनांक ${formattedDeliveryDateBill} को ${hindiDeliveryTimeBill} तक देना है।</div>
+                <div style="display:flex;justify-content:space-between;font-size:16px;margin:8px 0 8px 0;">
+                    <span style="flex:1;margin-right:16px;">नाम: ${customerNameHindi || ''}</span>
+                    <span>मो. नं. ${customerMobile || ''}</span>
+                </div>
+                <div style="width:100%;flex:1;display:flex;justify-content:center;">
+                    <table style="width:95%;border-collapse:collapse;font-size:16px;height:100%;">
+                        <thead>
+                            <tr>
+                                <th style="border:1px solid #222;padding:8px;text-align:center;font-weight:bold;width:20%;">उत्पाद</th>
+                                <th style="border:1px solid #222;padding:8px;text-align:center;font-weight:bold;width:14%;">मात्रा</th>
+                                <th style="border:1px solid #222;padding:8px;text-align:center;font-weight:bold;width:14%;">राशि</th>
+                                <th style="border:1px solid #222;padding:8px;width:4%;"></th>
+                                <th style="border:1px solid #222;padding:8px;text-align:center;font-weight:bold;width:20%;">उत्पाद</th>
+                                <th style="border:1px solid #222;padding:8px;text-align:center;font-weight:bold;width:14%;">मात्रा</th>
+                                <th style="border:1px solid #222;padding:8px;text-align:center;font-weight:bold;width:14%;">राशि</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${tableRows}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        `;
+        return container;
+    };
 
-    // Save the PDF
+    for (let pageIdx = 0; pageIdx < totalPages; pageIdx++) {
+        const container = renderBillPage(pageIdx);
+        // Wait for DOM to render
+        // eslint-disable-next-line no-await-in-loop
+        const canvas = await html2canvas(container, {
+            scale: 2,
+            useCORS: true,
+            logging: false,
+            windowWidth: 794,
+            windowHeight: 1123
+        });
+        const imgData = canvas.toDataURL('image/jpeg', 1.0);
+        if (pageIdx > 0) pdf.addPage();
+        pdf.addImage(imgData, 'JPEG', 0, 0, 210, 297);
+        document.body.removeChild(container);
+    }
+
     pdf.save(`bill_${customerName || 'guest'}_${formatDate()}.pdf`);
 };
 
@@ -486,17 +553,10 @@ const handleExportPDF = async () => {
     const timeMappingBill = { सुबह: 'सुबह', दोपहर: 'दोपहर', शाम: 'शाम' };
     const hindiDeliveryTimeBill = timeMappingBill[deliveryTimeHindi] || '';
 
-    // Calculate actual number of pages with items
+    // Calculate actual number of pages with items (46 items per page)
     const calculateTotalPages = () => {
-        const itemsPerPage = 50;
-        let pages = 0;
-        for (let i = 0; i < cart.length; i += itemsPerPage) {
-            const pageItems = cart.slice(i, i + itemsPerPage);
-            if (pageItems.length > 0) {
-                pages++;
-            }
-        }
-        return pages;
+        const itemsPerPage = 46;
+        return Math.ceil(cart.length / itemsPerPage);
     };
 
     const totalPages = calculateTotalPages();
@@ -507,7 +567,14 @@ const handleExportPDF = async () => {
         }
     };
 
+
     const billItems = generateTwoColumnTable(cart, currentPage);
+
+    // Calculate total price (sum of all 'amount' fields, if present and numeric)
+    const totalPrice = cart.reduce((sum, item) => {
+        const amt = parseFloat(item.amount);
+        return sum + (isNaN(amt) ? 0 : amt);
+    }, 0);
 
     const handleHindiSuggestionClick = (suggestion) => {
         setCustomerNameHindi(suggestion);
@@ -904,9 +971,9 @@ const handleExportPDF = async () => {
                             </tr>
                         </thead>
                         <tbody>
-                            {Array.from({ length: 25 }).map((_, idx) => (
+                            {Array.from({ length: 23 }).map((_, idx) => (
                                 <tr key={idx} style={{ 
-                                    height: '32px', // Fixed height for consistent 25 rows
+                                    height: '32px', // Fixed height for consistent 23 rows
                                 }}>
                                     <td className="border border-gray-800 text-center text-gray-900"
                                         style={{ 
@@ -964,6 +1031,20 @@ const handleExportPDF = async () => {
                                         }}>{billItems[idx]?.right?.amount || ''}</td>
                                 </tr>
                             ))}
+                            {/* Gap row before total price */}
+                            <tr style={{ height: '18px', background: '#fff' }}>
+                                <td colSpan={7} style={{ border: 'none', background: '#fff' }}></td>
+                            </tr>
+                            {/* Total price row at the bottom */}
+                            <tr style={{ height: '32px', background: '#f3f4f6', justifyContent: 'center' }}>
+                                <td colSpan={3} className="border border-gray-800 text-right font-bold text-lg pr-4" style={{ background: '#f3f4f6', marginBottom: '12px' }}>
+                                    <span style={{ display: 'inline-block', marginBottom: '8px' }}>कुल राशि:</span>
+                                </td>
+                                <td className="border border-gray-800" style={{ background: '#f3f4f6' }}></td>
+                                <td colSpan={3} className="border border-gray-800 text-left font-bold text-lg pl-4" style={{ background: '#f3f4f6' }}>
+                                    {/* ₹ {totalPrice.toLocaleString('en-IN', { maximumFractionDigits: 2 })} */}
+                                </td>
+                            </tr>
                         </tbody>
                     </table>
                 </div>
