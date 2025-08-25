@@ -866,11 +866,12 @@ const handleExportPDF = async () => {
                                         <td className="px-3 py-2">
                                             {editingItem === index ? (
                                                 <input
-                                                    type="number"
+                                                    type="text"
                                                     value={editQuantity}
-                                                    onChange={(e) => setEditQuantity(Math.max(1, parseInt(e.target.value) || 1))}
+                                                    onChange={(e) => setEditQuantity(e.target.value)}
                                                     className="w-20 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-primary"
-                                                    min="1"
+                                                    inputMode="decimal"
+                                                    pattern="[0-9]*[.,]?[0-9]*"
                                                 />
                                             ) : (
                                                 item.quantity
