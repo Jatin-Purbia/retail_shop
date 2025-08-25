@@ -796,13 +796,14 @@ const handleExportPDF = async () => {
                         <label className="block text-base text-primary-dark font-semibold mb-1">
                             मात्रा
                         </label>
-                        <input
-                            type="number"
-                            value={quantity}
-                            onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
-                            className="w-full px-3 py-2 text-base bg-gray-200 border border-accent-light rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                            min="1"
-                        />
+                            <input
+                                type="text"
+                                value={quantity}
+                                onChange={(e) => setQuantity(e.target.value)}
+                                className="w-full px-3 py-2 text-base bg-gray-200 border border-accent-light rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                                inputMode="decimal"
+                                pattern="[0-9]*[.,]?[0-9]*"
+                            />
                     </div>
                     <div className="flex gap-2 items-end">
                         <div className="flex-1">
