@@ -219,28 +219,13 @@ function CustomerPage() {
             if (!response.ok) throw new Error('Failed to search items');
             const data = await response.json();
             
-            // Transliterate product names to Hindi
-            const transliteratedData = await Promise.all(data.map(async (item) => {
-                try {
-                    const response = await fetch(
-                        `https://inputtools.google.com/request?text=${encodeURIComponent(item.name)}&itc=hi-t-i0-und&num=1&cp=0&cs=1&ie=utf-8&oe=utf-8&app=demopage`
-                    );
-                    const data = await response.json();
-                    if (data && data[1] && data[1][0] && data[1][0][1]) {
-                        return {
-                            ...item,
-                            name: data[1][0][1][0] // Use the first Hindi suggestion
-                        };
-                    }
-                    return item;
-                } catch (error) {
-                    console.error('Transliteration error:', error);
-                    return item;
-                }
+            const dataWithHindiNames = data.map(item => ({
+                ...item,
+                name: item.hindiName || item.name // Use hindiName if available
             }));
 
-            setFilteredItems(transliteratedData);
-            setHighlightedIndex(transliteratedData.length > 0 ? 0 : -1);
+            setFilteredItems(dataWithHindiNames);
+            setHighlightedIndex(dataWithHindiNames.length > 0 ? 0 : -1);
         } catch (error) {
             console.error('Search error:', error);
             setFilteredItems([]);
@@ -421,15 +406,15 @@ const handleExportPDF = async () => {
                 </tr>
             `;
         }
-        // Gap row and total row
-        tableRows += `
-            <tr style="height:18px;background:#fff;"><td colspan="7" style="border:none;background:#fff;"></td></tr>
-            <tr style="height:32px;background:#f3f4f6;">
-                <td colspan="3" style="border:1px solid #222;text-align:right;font-weight:bold;font-size:18px;background:#f3f4f6;padding-right:24px;padding-bottom:10px;">कुल राशि:</td>
-                <td style="border:1px solid #222;background:#f3f4f6;"></td>
-                <td colspan="3" style="border:1px solid #222;text-align:left;font-weight:bold;font-size:18px;background:#f3f4f6;"></td>
-            </tr>
-        `;
+        // // Gap row and total row
+        // tableRows += `
+        //     <tr style="height:18px;background:#fff;"><td colspan="7" style="border:none;background:#fff;"></td></tr>
+        //     <tr style="height:32px;background:#f3f4f6;">
+        //         <td colspan="3" style="border:1px solid #222;text-align:right;font-weight:bold;font-size:18px;background:#f3f4f6;padding-right:24px;padding-bottom:10px;">कुल राशि:</td>
+        //         <td style="border:1px solid #222;background:#f3f4f6;"></td>
+        //         <td colspan="3" style="border:1px solid #222;text-align:left;font-weight:bold;font-size:18px;background:#f3f4f6;"></td>
+        //     </tr>
+        // `;
 
         container.innerHTML = `
             <div style="font-family:DejaVu Sans,Arial,sans-serif;color:#222;width:758px;height:1087px;max-width:758px;margin:0 auto;display:flex;flex-direction:column;padding:18px 18px 18px 18px;box-sizing:border-box;">
@@ -796,14 +781,13 @@ const handleExportPDF = async () => {
                         <label className="block text-base text-primary-dark font-semibold mb-1">
                             मात्रा
                         </label>
-                            <input
-                                type="text"
-                                value={quantity}
-                                onChange={(e) => setQuantity(e.target.value)}
-                                className="w-full px-3 py-2 text-base bg-gray-200 border border-accent-light rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                                inputMode="decimal"
-                                pattern="[0-9]*[.,]?[0-9]*"
-                            />
+                        <input
+                            type="number"
+                            value={quantity}
+                            onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
+                            className="w-full px-3 py-2 text-base bg-gray-200 border border-accent-light rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                            min="1"
+                        />
                     </div>
                     <div className="flex gap-2 items-end">
                         <div className="flex-1">
@@ -866,12 +850,11 @@ const handleExportPDF = async () => {
                                         <td className="px-3 py-2">
                                             {editingItem === index ? (
                                                 <input
-                                                    type="text"
+                                                    type="number"
                                                     value={editQuantity}
-                                                    onChange={(e) => setEditQuantity(e.target.value)}
+                                                    onChange={(e) => setEditQuantity(Math.max(1, parseInt(e.target.value) || 1))}
                                                     className="w-20 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-primary"
-                                                    inputMode="decimal"
-                                                    pattern="[0-9]*[.,]?[0-9]*"
+                                                    min="1"
                                                 />
                                             ) : (
                                                 item.quantity
@@ -1048,16 +1031,16 @@ const handleExportPDF = async () => {
                             <tr style={{ height: '18px', background: '#fff' }}>
                                 <td colSpan={7} style={{ border: 'none', background: '#fff' }}></td>
                             </tr>
+                           
                             {/* Total price row at the bottom */}
-                            <tr style={{ height: '32px', background: '#f3f4f6', justifyContent: 'center' }}>
+                            {/* <tr style={{ height: '32px', background: '#f3f4f6', justifyContent: 'center' }}>
                                 <td colSpan={3} className="border border-gray-800 text-right font-bold text-lg pr-4" style={{ background: '#f3f4f6', marginBottom: '12px' }}>
                                     <span style={{ display: 'inline-block', marginBottom: '8px' }}>कुल राशि:</span>
                                 </td>
                                 <td className="border border-gray-800" style={{ background: '#f3f4f6' }}></td>
                                 <td colSpan={3} className="border border-gray-800 text-left font-bold text-lg pl-4" style={{ background: '#f3f4f6' }}>
-                                    {/* ₹ {totalPrice.toLocaleString('en-IN', { maximumFractionDigits: 2 })} */}
-                                </td>
-                            </tr>
+-                                </td>
+                            </tr> */}
                         </tbody>
                     </table>
                 </div>
