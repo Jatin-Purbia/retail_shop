@@ -324,9 +324,12 @@ function CustomerPage() {
             (item) => item.id === selectedItem.id && item.unit === selectedUnit
         );
 
+        const numericQuantity = parseFloat(quantity) || 0;
+        if (numericQuantity <= 0) return;
+        
         const cartItem = {
             ...selectedItem,
-            quantity,
+            quantity: numericQuantity,
             unit: selectedUnit,
         };
 
@@ -334,7 +337,7 @@ function CustomerPage() {
             const updatedCart = [...cart];
             updatedCart[existingItemIndex] = {
                 ...updatedCart[existingItemIndex],
-                quantity: updatedCart[existingItemIndex].quantity + quantity,
+                quantity: parseFloat(updatedCart[existingItemIndex].quantity) + numericQuantity,
             };
             setCart(updatedCart);
         } else {
@@ -597,10 +600,11 @@ const handleExportPDF = async () => {
 
     const handleSaveEdit = () => {
         if (editingItem !== null) {
+            const numericQuantity = parseFloat(editQuantity) || 1;
             const updatedCart = [...cart];
             updatedCart[editingItem] = {
                 ...updatedCart[editingItem],
-                quantity: editQuantity,
+                quantity: numericQuantity,
                 unit: editUnit,
             };
             setCart(updatedCart);
@@ -782,11 +786,13 @@ const handleExportPDF = async () => {
                             मात्रा
                         </label>
                         <input
-                            type="number"
+                            type="text"
                             value={quantity}
-                            onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
+                            onChange={(e) => setQuantity(e.target.value)}
                             className="w-full px-3 py-2 text-base bg-gray-200 border border-accent-light rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                            min="1"
+                            inputMode="decimal"
+                            pattern="[0-9]*[.,]?[0-9]*"
+                            placeholder="Enter quantity"
                         />
                     </div>
                     <div className="flex gap-2 items-end">
@@ -850,11 +856,12 @@ const handleExportPDF = async () => {
                                         <td className="px-3 py-2">
                                             {editingItem === index ? (
                                                 <input
-                                                    type="number"
+                                                    type="text"
                                                     value={editQuantity}
-                                                    onChange={(e) => setEditQuantity(Math.max(1, parseInt(e.target.value) || 1))}
+                                                    onChange={(e) => setEditQuantity(e.target.value)}
                                                     className="w-20 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-primary"
-                                                    min="1"
+                                                    inputMode="decimal"
+                                                    pattern="[0-9]*[.,]?[0-9]*"
                                                 />
                                             ) : (
                                                 item.quantity
