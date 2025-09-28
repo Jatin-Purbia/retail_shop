@@ -118,6 +118,7 @@ function generateTwoColumnTable(cart, page = 0) {
 }
 
 function CustomerPage() {
+    const [showClearModal, setShowClearModal] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     const [quantity, setQuantity] = useState(1);
     const [selectedUnit, setSelectedUnit] = useState('कि.ग्रा.');
@@ -829,11 +830,35 @@ const handleExportPDF = async () => {
                 <div className="flex justify-between mb-4">
                     <h2 className="text-xl font-bold text-primary">Cart Items ({cart.length})</h2>
                     <button
-                        onClick={handleClearCart}
+                        onClick={() => setShowClearModal(true)}
                         className="px-4 py-2 text-base bg-red-500 hover:bg-red-600 text-white rounded-lg font-semibold shadow transition"
                     >
                         Clear All
                     </button>
+            {showClearModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+                    <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-sm text-center">
+                        <div className="text-lg font-semibold mb-4">क्या आप वाकई सभी आइटम्स हटाना चाहते हैं?</div>
+                        <div className="flex justify-center gap-4 mt-2">
+                            <button
+                                className="px-4 py-2 bg-red-500 text-white rounded font-semibold hover:bg-red-600"
+                                onClick={() => {
+                                    handleClearCart();
+                                    setShowClearModal(false);
+                                }}
+                            >
+                                Yes
+                            </button>
+                            <button
+                                className="px-4 py-2 bg-gray-300 text-gray-800 rounded font-semibold hover:bg-gray-400"
+                                onClick={() => setShowClearModal(false)}
+                            >
+                                No
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
                 </div>
 
                 {cart.length > 0 && (
