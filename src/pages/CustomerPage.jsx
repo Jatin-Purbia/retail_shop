@@ -178,23 +178,44 @@ function CustomerPage() {
     const transliterateToHindi = async (text) => {
         if (!text) {
             setHindiSuggestions([]);
+            setCustomerNameHindi('');
             return;
         }
 
+        // Split text into parts, preserving numbers and spaces
+        const parts = text.split(/(\d+|\s+)/);
+        let transliteratedParts = [];
+
         try {
-            const response = await fetch(
-                `https://inputtools.google.com/request?text=${encodeURIComponent(text)}&itc=hi-t-i0-und&num=5&cp=0&cs=1&ie=utf-8&oe=utf-8&app=demopage`
-            );
-            const data = await response.json();
-            if (data && data[1] && data[1][0] && data[1][0][1]) {
-                const suggestions = data[1][0][1];
-                setHindiSuggestions(suggestions);
-                if (suggestions.length > 0) {
-                    setCustomerNameHindi(suggestions[0]);
+            for (let part of parts) {
+                // If part is a number or whitespace, keep it as is
+                if (/^\d+$/.test(part) || /^\s+$/.test(part)) {
+                    transliteratedParts.push(part);
+                } else if (part.trim() && /[a-zA-Z]/.test(part)) {
+                    // Only transliterate parts that contain English letters
+                    const response = await fetch(
+                        `https://inputtools.google.com/request?text=${encodeURIComponent(part)}&itc=hi-t-i0-und&num=1&cp=0&cs=1&ie=utf-8&oe=utf-8&app=demopage`
+                    );
+                    const data = await response.json();
+                    if (data && data[1] && data[1][0] && data[1][0][1] && data[1][0][1][0]) {
+                        transliteratedParts.push(data[1][0][1][0]);
+                    } else {
+                        transliteratedParts.push(part);
+                    }
+                } else {
+                    transliteratedParts.push(part);
                 }
             }
+
+            const finalTransliteration = transliteratedParts.join('');
+            setCustomerNameHindi(finalTransliteration);
+            setHindiSuggestions([finalTransliteration]);
+
         } catch (error) {
             console.error('Transliteration error:', error);
+            // Fallback: keep numbers as is, transliterate only letters
+            const fallbackResult = text.replace(/[a-zA-Z]+/g, (match) => match);
+            setCustomerNameHindi(fallbackResult);
         }
     };
 
@@ -400,8 +421,8 @@ const handleExportPDF = async () => {
         for (let idx = 0; idx < 23; idx++) {
             tableRows += `
                 <tr style="height:32px;">
-                    <td style="border:1px solid #222;text-align:center;width:20%;font-size:14px;">${billItems[idx]?.left?.name || ''}</td>
-                    <td style="border:1px solid #222;text-align:center;width:14%;font-size:14px;">${billItems[idx]?.left?.quantity || ''}</td>
+                    <td style="border:1px solid #222;text-align:center;width:20%;font-size:16px;">${billItems[idx]?.left?.name || ''}</td>
+                    <td style="border:1px solid #222;text-align:center;width:14%;font-size:16px;">${billItems[idx]?.left?.quantity || ''}</td>
                     <td style="border:1px solid #222;text-align:center;width:14%;font-size:14px;">${billItems[idx]?.left?.amount || ''}</td>
                     <td style="border:1px solid #222;width:4%;"></td>
                     <td style="border:1px solid #222;text-align:center;width:20%;font-size:14px;">${billItems[idx]?.right?.name || ''}</td>
@@ -424,7 +445,7 @@ const handleExportPDF = async () => {
             <div style="font-family:DejaVu Sans,Arial,sans-serif;color:#222;width:758px;height:1087px;max-width:758px;margin:0 auto;display:flex;flex-direction:column;padding:18px 18px 18px 18px;box-sizing:border-box;">
                 <div style="text-align:center;font-weight:bold;font-size:24px;margin-bottom:8px;">! श्री राम जी !!</div>
                 <div style="text-align:center;font-size:16px;margin-bottom:8px;">दिनांक ${formattedDeliveryDateBill} को ${hindiDeliveryTimeBill} तक देना है।</div>
-                <div style="display:flex;justify-content:space-between;font-size:16px;margin:8px 0 8px 0;">
+                <div style="display:flex;justify-content:space-between;font-size:18px;margin:8px 0 8px 0;">
                     <span style="flex:1;margin-right:16px;">नाम: ${customerNameHindi || ''}</span>
                     <span>मो. नं. ${customerMobile || ''}</span>
                 </div>
@@ -1007,7 +1028,7 @@ const handleExportPDF = async () => {
                                         style={{ 
                                             width: '20%',
                                             padding: '5px 4px',
-                                            fontSize: '14px',
+                                            fontSize: '16px',
                                             whiteSpace: 'nowrap',
                                             overflow: 'hidden',
                                             textOverflow: 'ellipsis',
@@ -1017,7 +1038,7 @@ const handleExportPDF = async () => {
                                         style={{ 
                                             width: '14%',
                                             padding: '5px 4px',
-                                            fontSize: '14px',
+                                            fontSize: '16px',
                                             verticalAlign: 'middle'
                                         }}>{billItems[idx]?.left?.quantity || ''}</td>
                                     <td className="border border-gray-800 text-center text-gray-900"
