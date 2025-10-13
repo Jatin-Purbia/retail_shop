@@ -421,12 +421,12 @@ const handleExportPDF = async () => {
         for (let idx = 0; idx < 23; idx++) {
             tableRows += `
                 <tr style="height:32px;">
-                    <td style="border:1px solid #222;text-align:center;width:20%;font-size:16px;">${billItems[idx]?.left?.name || ''}</td>
+                    <td style="border:1px solid #222;text-align:center;width:20%;font-size:18px;">${billItems[idx]?.left?.name || ''}</td>
                     <td style="border:1px solid #222;text-align:center;width:14%;font-size:16px;">${billItems[idx]?.left?.quantity || ''}</td>
                     <td style="border:1px solid #222;text-align:center;width:14%;font-size:14px;">${billItems[idx]?.left?.amount || ''}</td>
                     <td style="border:1px solid #222;width:4%;"></td>
-                    <td style="border:1px solid #222;text-align:center;width:20%;font-size:14px;">${billItems[idx]?.right?.name || ''}</td>
-                    <td style="border:1px solid #222;text-align:center;width:14%;font-size:14px;">${billItems[idx]?.right?.quantity || ''}</td>
+                    <td style="border:1px solid #222;text-align:center;width:20%;font-size:18px;">${billItems[idx]?.right?.name || ''}</td>
+                    <td style="border:1px solid #222;text-align:center;width:14%;font-size:16px;">${billItems[idx]?.right?.quantity || ''}</td>
                     <td style="border:1px solid #222;text-align:center;width:14%;font-size:14px;">${billItems[idx]?.right?.amount || ''}</td>
                 </tr>
             `;
@@ -1028,7 +1028,7 @@ const handleExportPDF = async () => {
                                         style={{ 
                                             width: '20%',
                                             padding: '5px 4px',
-                                            fontSize: '16px',
+                                            fontSize: '18px',
                                             whiteSpace: 'nowrap',
                                             overflow: 'hidden',
                                             textOverflow: 'ellipsis',
@@ -1058,7 +1058,7 @@ const handleExportPDF = async () => {
                                         style={{ 
                                             width: '20%',
                                             padding: '5px 4px',
-                                            fontSize: '14px',
+                                            fontSize: '18px',
                                             whiteSpace: 'nowrap',
                                             overflow: 'hidden',
                                             textOverflow: 'ellipsis',
@@ -1068,7 +1068,7 @@ const handleExportPDF = async () => {
                                         style={{ 
                                             width: '14%',
                                             padding: '5px 4px',
-                                            fontSize: '14px',
+                                            fontSize: '16px',
                                             verticalAlign: 'middle'
                                         }}>{billItems[idx]?.right?.quantity || ''}</td>
                                     <td className="border border-gray-800 text-center text-gray-900"
