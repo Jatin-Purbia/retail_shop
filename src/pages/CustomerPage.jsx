@@ -7,6 +7,13 @@ import 'react-simple-keyboard/build/css/index.css';
 
 const API_URL = 'http://localhost:5000/api';
 
+const generateEntryId = () => `entry-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+
+const normalizeCartItem = (item) => ({
+    ...item,
+    entryId: item?.entryId ?? generateEntryId(),
+});
+
 // Constants for pagination
 const ROWS_PER_PAGE = 5; // Number of rows per column
 // const ITEMS_PER_PAGE = ROWS_PER_PAGE * 2; // Two items per row
@@ -124,7 +131,17 @@ function CustomerPage() {
     const [selectedUnit, setSelectedUnit] = useState('कि.ग्रा.');
     const [cart, setCart] = useState(() => {
         const savedCart = localStorage.getItem('customerCart');
-        return savedCart ? JSON.parse(savedCart) : [];
+        if (!savedCart) return [];
+        try {
+            const parsedCart = JSON.parse(savedCart);
+            if (!Array.isArray(parsedCart)) return [];
+            return parsedCart
+                .filter((item) => item && typeof item === 'object')
+                .map(normalizeCartItem);
+        } catch (error) {
+            console.error('Failed to parse saved cart', error);
+            return [];
+        }
     });
     const [filteredItems, setFilteredItems] = useState([]);
     const [customerName, setCustomerName] = useState(() => localStorage.getItem('customerName') || '');
@@ -342,30 +359,17 @@ function CustomerPage() {
     const handleAddToCart = () => {
         if (!selectedItem) return;
 
-        const existingItemIndex = cart.findIndex(
-            (item) => item.id === selectedItem.id && item.unit === selectedUnit
-        );
-
         const numericQuantity = parseFloat(quantity) || 0;
         if (numericQuantity <= 0) return;
         
-        const cartItem = {
+        const cartItem = normalizeCartItem({
             ...selectedItem,
             quantity: numericQuantity,
             unit: selectedUnit,
-        };
+        });
 
-        if (existingItemIndex > -1) {
-            const updatedCart = [...cart];
-            updatedCart[existingItemIndex] = {
-                ...updatedCart[existingItemIndex],
-                quantity: parseFloat(updatedCart[existingItemIndex].quantity) + numericQuantity,
-            };
-            setCart(updatedCart);
-        } else {
-            // Add new item at the beginning of the cart
-            setCart((prevCart) => [cartItem, ...prevCart]);
-        }
+        // Always add a fresh entry so duplicate selections stay separate
+        setCart((prevCart) => [cartItem, ...prevCart]);
 
         setSearchTerm('');
         setFilteredItems([]);
@@ -896,7 +900,7 @@ const handleExportPDF = async () => {
                             </thead>
                             <tbody>
                                 {cart.map((item, index) => (
-                                    <tr key={`${item.id}-${item.unit}-${index}`} className="border-b hover:bg-gray-50">
+                                    <tr key={item.entryId || `${item.id}-${item.unit}-${index}`} className="border-b hover:bg-gray-50">
                                         <td className="px-3 py-2">{cart.length - index}</td>
                                         <td className="px-3 py-2 font-medium">{item.name}</td>
                                         <td className="px-3 py-2">

@@ -13,7 +13,7 @@ const db = mysql.createConnection({
   host: 'localhost',
   user: 'root',
   password: 'ADMIN', 
-  // password: 'jain@0182', // Update with your MySQL password
+  // password: 'jatin@0182', // Update with your MySQL password
   database: 'retail_shop'
 });
 
