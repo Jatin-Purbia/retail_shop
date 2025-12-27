@@ -242,6 +242,9 @@ const Admin = () => {
                   <option value="नग">नग</option>
                   <option value="लीटर">लीटर</option>
                   <option value="बोतल">बोतल</option>
+                  <option value="नग">नग</option>
+                  <option value="कार्टून">कार्टून</option>
+                  <option value="कट्टा">कट्टा</option>
                 </select>
                 <div className="mt-4">
                   <button
