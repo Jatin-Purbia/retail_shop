@@ -100,7 +100,7 @@ function formatDate(date = new Date()) {
 //     return rows;
 // }
 function generateTwoColumnTable(cart, page = 0) {
-    const ROWS_PER_SIDE = 23; // 23 rows per side, 46 items per page
+    const ROWS_PER_SIDE = 22; // 22 rows per side, 44 items per page
     const ITEMS_PER_PAGE = ROWS_PER_SIDE * 2;
     const cartItems = [...cart].reverse(); // Newest first
     const startIdx = page * ITEMS_PER_PAGE;
@@ -199,40 +199,22 @@ function CustomerPage() {
             return;
         }
 
-        // Split text into parts, preserving numbers and spaces
-        const parts = text.split(/(\d+|\s+)/);
-        let transliteratedParts = [];
-
         try {
-            for (let part of parts) {
-                // If part is a number or whitespace, keep it as is
-                if (/^\d+$/.test(part) || /^\s+$/.test(part)) {
-                    transliteratedParts.push(part);
-                } else if (part.trim() && /[a-zA-Z]/.test(part)) {
-                    // Only transliterate parts that contain English letters
-                    const response = await fetch(
-                        `https://inputtools.google.com/request?text=${encodeURIComponent(part)}&itc=hi-t-i0-und&num=1&cp=0&cs=1&ie=utf-8&oe=utf-8&app=demopage`
-                    );
-                    const data = await response.json();
-                    if (data && data[1] && data[1][0] && data[1][0][1] && data[1][0][1][0]) {
-                        transliteratedParts.push(data[1][0][1][0]);
-                    } else {
-                        transliteratedParts.push(part);
-                    }
-                } else {
-                    transliteratedParts.push(part);
-                }
+            const response = await fetch(
+                `https://inputtools.google.com/request?text=${encodeURIComponent(text)}&itc=hi-t-i0-und&num=8&cp=0&cs=1&ie=utf-8&oe=utf-8&app=demopage`
+            );
+            const data = await response.json();
+            if (data && data[1] && data[1][0] && data[1][0][1] && data[1][0][1].length > 0) {
+                const suggestions = data[1][0][1];
+                setHindiSuggestions(suggestions);
+                setCustomerNameHindi(suggestions[0]);
+            } else {
+                setHindiSuggestions([text]);
+                setCustomerNameHindi(text);
             }
-
-            const finalTransliteration = transliteratedParts.join('');
-            setCustomerNameHindi(finalTransliteration);
-            setHindiSuggestions([finalTransliteration]);
-
         } catch (error) {
             console.error('Transliteration error:', error);
-            // Fallback: keep numbers as is, transliterate only letters
-            const fallbackResult = text.replace(/[a-zA-Z]+/g, (match) => match);
-            setCustomerNameHindi(fallbackResult);
+            setCustomerNameHindi(text);
         }
     };
 
@@ -389,7 +371,7 @@ const handleExportPDF = async () => {
         return;
     }
 
-    const ROWS_PER_SIDE = 23;
+    const ROWS_PER_SIDE = 22;
     const ITEMS_PER_PAGE = ROWS_PER_SIDE * 2;
     const totalPages = Math.ceil(cart.length / ITEMS_PER_PAGE);
 
@@ -404,13 +386,13 @@ const handleExportPDF = async () => {
     const renderBillPage = (pageIdx) => {
         // Create a container
         const container = document.createElement('div');
-        container.style.position = 'fixed';
+        container.style.position = 'absolute';
         container.style.left = '-9999px';
         container.style.top = '0';
         container.style.width = '794px';
         container.style.height = '1123px';
         container.style.background = '#fff';
-        container.style.zIndex = '-1';
+        container.style.overflow = 'hidden';
         document.body.appendChild(container);
 
         // Generate billItems for this page
@@ -422,7 +404,7 @@ const handleExportPDF = async () => {
         const timeMappingBill = { सुबह: 'सुबह', दोपहर: 'दोपहर', शाम: 'शाम' };
         const hindiDeliveryTimeBill = timeMappingBill[deliveryTimeHindi] || '';
         let tableRows = '';
-        for (let idx = 0; idx < 23; idx++) {
+        for (let idx = 0; idx < 22; idx++) {
             tableRows += `
                 <tr style="height:32px;">
                     <td style="border:1px solid #222;text-align:center;width:20%;font-size:18px;">${billItems[idx]?.left?.name || ''}</td>
@@ -446,30 +428,53 @@ const handleExportPDF = async () => {
         // `;
 
         container.innerHTML = `
-            <div style="font-family:DejaVu Sans,Arial,sans-serif;color:#222;width:758px;height:1087px;max-width:758px;margin:0 auto;display:flex;flex-direction:column;padding:18px 18px 18px 18px;box-sizing:border-box;">
-                <div style="text-align:center;font-weight:bold;font-size:24px;margin-bottom:8px;">! श्री राम जी !!</div>
-                <div style="text-align:center;font-size:16px;margin-bottom:8px;">दिनांक ${formattedDeliveryDateBill} को ${hindiDeliveryTimeBill} तक देना है।</div>
-                <div style="display:flex;justify-content:space-between;font-size:18px;margin:8px 0 8px 0;">
-                    <span style="flex:1;margin-right:16px;">नाम: ${customerNameHindi || ''}</span>
-                    <span>मो. नं. ${customerMobile || ''}</span>
+            <div style="font-family:DejaVu Sans,Arial,sans-serif;color:#222;width:794px;height:1123px;max-width:794px;margin:0;display:flex;flex-direction:column;padding:16px 20px 14px 20px;box-sizing:border-box;position:relative;background:#fff;">
+
+                <!-- Header: box (left) | title+subtitle centered | spacer (right) -->
+                <div style="width:100%;display:flex;flex-direction:row;align-items:center;margin-bottom:6px;">
+                    <div style="border:1px solid #222;padding:10px 12px;width:210px;min-width:210px;font-size:14px;background:#fff;flex-shrink:0;">
+                        <div style="display:flex;align-items:center;margin-bottom:12px;">
+                            <span style="font-weight:600;white-space:nowrap;margin-right:6px;">Check By:</span>
+                        </div>
+                        <div style="display:flex;align-items:center;">
+                            <span style="font-weight:600;white-space:nowrap;margin-right:6px;">Delivered By:</span>
+                        </div>
+                    </div>
+                    <div style="flex:1;text-align:center;padding:0 8px;">
+                        <div style="font-weight:bold;font-size:22px;color:#222;">! श्री राम जी !!</div>
+                        <div style="font-size:15px;color:#222;margin-top:6px;">दिनांक ${formattedDeliveryDateBill} को ${hindiDeliveryTimeBill} तक देना है।</div>
+                    </div>
+                    <div style="width:210px;min-width:210px;flex-shrink:0;"></div>
                 </div>
+                <!-- Name / Mobile row — full width below header -->
+                <div style="display:flex;justify-content:space-between;align-items:baseline;font-size:16px;line-height:1.8;margin-bottom:8px;color:#222;padding:2px 4px 4px 4px;min-width:0;">
+                    <span style="flex:1;min-width:0;white-space:nowrap;overflow:visible;margin-right:8px;">नाम: ${customerNameHindi || ''}</span>
+                    <span style="white-space:nowrap;flex-shrink:0;">मो. नं. ${customerMobile || ''}</span>
+                </div>
+
+                <!-- Items table -->
                 <div style="width:100%;flex:1;display:flex;justify-content:center;">
                     <table style="width:95%;border-collapse:collapse;font-size:16px;height:100%;">
                         <thead>
                             <tr>
-                                <th style="border:1px solid #222;padding:8px;text-align:center;font-weight:bold;width:20%;">उत्पाद</th>
-                                <th style="border:1px solid #222;padding:8px;text-align:center;font-weight:bold;width:14%;">मात्रा</th>
-                                <th style="border:1px solid #222;padding:8px;text-align:center;font-weight:bold;width:14%;">राशि</th>
-                                <th style="border:1px solid #222;padding:8px;width:4%;"></th>
-                                <th style="border:1px solid #222;padding:8px;text-align:center;font-weight:bold;width:20%;">उत्पाद</th>
-                                <th style="border:1px solid #222;padding:8px;text-align:center;font-weight:bold;width:14%;">मात्रा</th>
-                                <th style="border:1px solid #222;padding:8px;text-align:center;font-weight:bold;width:14%;">राशि</th>
+                                <th style="border:1px solid #222;padding:7px;text-align:center;font-weight:bold;width:20%;">उत्पाद</th>
+                                <th style="border:1px solid #222;padding:7px;text-align:center;font-weight:bold;width:14%;">मात्रा</th>
+                                <th style="border:1px solid #222;padding:7px;text-align:center;font-weight:bold;width:14%;">राशि</th>
+                                <th style="border:1px solid #222;padding:7px;width:4%;"></th>
+                                <th style="border:1px solid #222;padding:7px;text-align:center;font-weight:bold;width:20%;">उत्पाद</th>
+                                <th style="border:1px solid #222;padding:7px;text-align:center;font-weight:bold;width:14%;">मात्रा</th>
+                                <th style="border:1px solid #222;padding:7px;text-align:center;font-weight:bold;width:14%;">राशि</th>
                             </tr>
                         </thead>
                         <tbody>
                             ${tableRows}
                         </tbody>
                     </table>
+                </div>
+
+                <!-- Note -->
+                <div style="margin-top:12px;border-top:1px solid #aaa;padding-top:7px;font-size:13px;text-align:center;color:#222;">
+                    <span style="font-weight:bold;font-size:14px;margin-right:6px;">नोट:</span>शेष बचा सामान रविवार को वापस नहीं लिया जाएगा। शेष बचा सामान लाने से पूर्व दुकान पर संपर्क करें। सामान के साथ हिसाब वाली पर्ची लाना अनिवार्य है।
                 </div>
             </div>
         `;
@@ -478,7 +483,9 @@ const handleExportPDF = async () => {
 
     for (let pageIdx = 0; pageIdx < totalPages; pageIdx++) {
         const container = renderBillPage(pageIdx);
-        // Wait for DOM to render
+        // Wait for DOM to paint before capturing
+        // eslint-disable-next-line no-await-in-loop
+        await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
         // eslint-disable-next-line no-await-in-loop
         const canvas = await html2canvas(container, {
             scale: 2,
@@ -567,9 +574,9 @@ const handleExportPDF = async () => {
     const timeMappingBill = { सुबह: 'सुबह', दोपहर: 'दोपहर', शाम: 'शाम' };
     const hindiDeliveryTimeBill = timeMappingBill[deliveryTimeHindi] || '';
 
-    // Calculate actual number of pages with items (46 items per page)
+    // Calculate actual number of pages with items (44 items per page)
     const calculateTotalPages = () => {
-        const itemsPerPage = 46;
+        const itemsPerPage = 44;
         return Math.ceil(cart.length / itemsPerPage);
     };
 
@@ -983,23 +990,38 @@ const handleExportPDF = async () => {
                     ref={billRef}
                     className="bg-white p-4 border border-gray-800 rounded-lg shadow-sm mb-4"
                     style={{
+                        position: 'relative',
                         fontFamily: 'DejaVu Sans, Arial, sans-serif',
                         color: '#222',
-                        width: '794px', // A4 width
-                        height: '1123px', // A4 height
+                        width: '100%',
+                        height: 'auto',
                         maxWidth: '794px',
                         margin: '0 auto',
                         display: 'flex',
-                        flexDirection: 'column'
+                        flexDirection: 'column',
+                        boxSizing: 'border-box'
                     }}
                 >
-                    <div className="text-center font-bold text-xl mb-2 text-gray-900">! श्री राम जी !!</div>
-                    <div className="text-center text-base mb-2 text-gray-900">
-                        {`दिनांक ${formattedDeliveryDateBill} को ${hindiDeliveryTimeBill} तक देना है।`}
+                    {/* Header: box (left) | title+subtitle centered | spacer (right) */}
+                    <div className="w-full flex flex-row items-center mb-1">
+                        <div className="border p-2 text-sm bg-white flex-shrink-0" style={{width:'210px'}}>
+                            <div className="flex items-center mb-3">
+                                <span className="font-semibold whitespace-nowrap mr-2">Check By:</span>
+                            </div>
+                            <div className="flex items-center">
+                                <span className="font-semibold whitespace-nowrap mr-2">Delivered By:</span>
+                            </div>
+                        </div>
+                        <div className="text-center flex-1 px-2">
+                            <div className="font-bold text-xl text-gray-900">! श्री राम जी !!</div>
+                            <div className="text-base text-gray-900 mt-1">{`दिनांक ${formattedDeliveryDateBill} को ${hindiDeliveryTimeBill} तक देना है।`}</div>
+                        </div>
+                        <div className="flex-shrink-0" style={{width:'210px'}}></div>
                     </div>
-                    <div className="flex justify-between text-base m-2 mb-2 text-gray-900">
-                        <span className="flex-1 mr-4">नाम: {customerNameHindi || ''}</span>
-                        <span className="whitespace-nowrap">मो. नं. {customerMobile || ''}</span>
+                    {/* Name / Mobile row — full width, below the header */}
+                    <div className="flex justify-between text-base mb-2 text-gray-900 px-1">
+                        <span className="flex-1 min-w-0 mr-2 overflow-hidden text-ellipsis whitespace-nowrap">नाम: {customerNameHindi || ''}</span>
+                        <span className="whitespace-nowrap flex-shrink-0">मो. नं. {customerMobile || ''}</span>
                     </div>
 
                    <div className="w-full flex-1 flex justify-center">
@@ -1028,9 +1050,9 @@ const handleExportPDF = async () => {
                             </tr>
                         </thead>
                         <tbody>
-                            {Array.from({ length: 23 }).map((_, idx) => (
+                            {Array.from({ length: 22 }).map((_, idx) => (
                                 <tr key={idx} style={{ 
-                                    height: '32px', // Fixed height for consistent 23 rows
+                                    height: '32px', // Fixed height for consistent 22 rows
                                 }}>
                                     <td className="border border-gray-800 text-center text-gray-900"
                                         style={{ 
@@ -1104,6 +1126,9 @@ const handleExportPDF = async () => {
                             </tr> */}
                         </tbody>
                     </table>
+                </div>
+                <div style={{marginTop: '14px', borderTop: '1px solid #aaa', paddingTop: '8px', fontSize: '13px', textAlign: 'center'}}>
+                    <span style={{fontWeight: 'bold', fontSize: '14px', marginRight: '6px'}}>नोट:</span>शेष बचा सामान रविवार को वापस नहीं लिया जाएगा। शेष बचा सामान लाने से पूर्व दुकान पर संपर्क करें। सामान के साथ हिसाब वाली पर्ची लाना अनिवार्य है।
                 </div>
                 </div>
 
