@@ -32,7 +32,10 @@ const createTableQuery = `
     id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
     hindiName VARCHAR(255) NOT NULL,
-    unit VARCHAR(50) NOT NULL
+    unit VARCHAR(50) NOT NULL,
+    rateA DECIMAL(10,2) NOT NULL DEFAULT 0,
+    rateB DECIMAL(10,2) NOT NULL DEFAULT 0,
+    rateC DECIMAL(10,2) NOT NULL DEFAULT 0
   )
 `;
 
@@ -41,7 +44,44 @@ db.query(createTableQuery, (err) => {
     console.error('Error creating table:', err);
     return;
   }
-  console.log('Inventory table ready');
+
+  // Keep older databases compatible by adding missing columns if needed.
+  db.query('SHOW COLUMNS FROM inventory', (columnsErr, columnsResult) => {
+    if (columnsErr) {
+      console.error('Error reading inventory columns:', columnsErr);
+      return;
+    }
+
+    const existingColumns = new Set(columnsResult.map((col) => col.Field));
+    const requiredRateColumns = [
+      { name: 'rateA', sql: 'ALTER TABLE inventory ADD COLUMN rateA DECIMAL(10,2) NOT NULL DEFAULT 0' },
+      { name: 'rateB', sql: 'ALTER TABLE inventory ADD COLUMN rateB DECIMAL(10,2) NOT NULL DEFAULT 0' },
+      { name: 'rateC', sql: 'ALTER TABLE inventory ADD COLUMN rateC DECIMAL(10,2) NOT NULL DEFAULT 0' },
+    ];
+
+    const missingColumns = requiredRateColumns.filter((col) => !existingColumns.has(col.name));
+
+    if (missingColumns.length === 0) {
+      console.log('Inventory table ready with rate columns');
+      return;
+    }
+
+    let pending = missingColumns.length;
+    missingColumns.forEach((column) => {
+      db.query(column.sql, (alterErr) => {
+        if (alterErr) {
+          console.error(`Error adding ${column.name} column:`, alterErr);
+        } else {
+          console.log(`${column.name} column added`);
+        }
+
+        pending -= 1;
+        if (pending === 0) {
+          console.log('Inventory table ready with rate columns');
+        }
+      });
+    });
+  });
 });
 
 // API Endpoints
@@ -83,25 +123,25 @@ app.get('/api/inventory/search', (req, res) => {
 
 // Add new item
 app.post('/api/inventory', (req, res) => {
-  const { name, hindiName, unit } = req.body;
-  const query = 'INSERT INTO inventory (name, hindiName, unit) VALUES (?, ?, ?)';
+  const { name, hindiName, unit, rateA = 0, rateB = 0, rateC = 0 } = req.body;
+  const query = 'INSERT INTO inventory (name, hindiName, unit, rateA, rateB, rateC) VALUES (?, ?, ?, ?, ?, ?)';
   
-  db.query(query, [name, hindiName, unit], (err, result) => {
+  db.query(query, [name, hindiName, unit, rateA, rateB, rateC], (err, result) => {
     if (err) {
       res.status(500).json({ error: err.message });
       return;
     }
-    res.status(201).json({ id: result.insertId, name, hindiName, unit });
+    res.status(201).json({ id: result.insertId, name, hindiName, unit, rateA, rateB, rateC });
   });
 });
 
 // Update item
 app.put('/api/inventory/:id', (req, res) => {
   const { id } = req.params;
-  const { name, hindiName, unit } = req.body;
-  const query = 'UPDATE inventory SET name = ?, hindiName = ?, unit = ? WHERE id = ?';
+  const { name, hindiName, unit, rateA = 0, rateB = 0, rateC = 0 } = req.body;
+  const query = 'UPDATE inventory SET name = ?, hindiName = ?, unit = ?, rateA = ?, rateB = ?, rateC = ? WHERE id = ?';
   
-  db.query(query, [name, hindiName, unit, id], (err, result) => {
+  db.query(query, [name, hindiName, unit, rateA, rateB, rateC, id], (err, result) => {
     if (err) {
       res.status(500).json({ error: err.message });
       return;
@@ -110,7 +150,7 @@ app.put('/api/inventory/:id', (req, res) => {
       res.status(404).json({ error: 'Item not found' });
       return;
     }
-    res.json({ id, name, hindiName, unit });
+    res.json({ id, name, hindiName, unit, rateA, rateB, rateC });
   });
 });
 

@@ -8,7 +8,10 @@ const Admin = () => {
   const [formData, setFormData] = useState({
     name: '',
     hindiName: '',
-    unit: ''
+    unit: '',
+    rateA: '',
+    rateB: '',
+    rateC: ''
   });
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -124,13 +127,20 @@ const Admin = () => {
     e.preventDefault();
     setError(null);
 
+    const payload = {
+      ...formData,
+      rateA: Number(formData.rateA) || 0,
+      rateB: Number(formData.rateB) || 0,
+      rateC: Number(formData.rateC) || 0,
+    };
+
     try {
       const response = await fetch(`${API_URL}/inventory${editingItem ? `/${editingItem.id}` : ''}`, {
         method: editingItem ? 'PUT' : 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(payload),
       });
 
       if (!response.ok) throw new Error(editingItem ? 'Failed to update item' : 'Failed to add item');
@@ -151,7 +161,10 @@ const Admin = () => {
     setFormData({
       name: item.name,
       hindiName: item.hindiName,
-      unit: item.unit
+      unit: item.unit,
+      rateA: item.rateA ?? '',
+      rateB: item.rateB ?? '',
+      rateC: item.rateC ?? ''
     });
     setNameSuggestions([]);
     setShowSuggestions(false);
@@ -176,7 +189,10 @@ const Admin = () => {
     setFormData({
       name: '',
       hindiName: '',
-      unit: ''
+      unit: '',
+      rateA: '',
+      rateB: '',
+      rateC: ''
     });
     setNameSuggestions([]);
     setShowSuggestions(false);
@@ -247,6 +263,57 @@ const Admin = () => {
                   <option value="कट्टा">कट्टा</option>
                 </select>
                 <div className="mt-4">
+                  <div className="mb-3 rounded-lg border border-accent-light bg-primary-light/10 p-3 text-sm text-primary-dark">
+                    <p className="font-semibold mb-1">Rate Basis (payment timing)</p>
+                    <p>A: Advance payment (about 1 month before)</p>
+                    <p>B: Current/on-time payment (present month)</p>
+                    <p>C: Credit payment (up to about 1 month after)</p>
+                  </div>
+
+                  <label className="block text-base text-primary-dark font-semibold mb-1">
+                    Rate A (Advance)
+                  </label>
+                  <input
+                    type="number"
+                    name="rateA"
+                    value={formData.rateA}
+                    onChange={handleInputChange}
+                    min="0"
+                    step="0.01"
+                    className="w-full px-3 py-2 text-base bg-gray-200 border border-accent-light rounded-lg focus:outline-none focus:ring-2 focus:ring-primary mb-3"
+                    required
+                  />
+
+                  <label className="block text-base text-primary-dark font-semibold mb-1">
+                    Rate B (Current)
+                  </label>
+                  <input
+                    type="number"
+                    name="rateB"
+                    value={formData.rateB}
+                    onChange={handleInputChange}
+                    min="0"
+                    step="0.01"
+                    className="w-full px-3 py-2 text-base bg-gray-200 border border-accent-light rounded-lg focus:outline-none focus:ring-2 focus:ring-primary mb-3"
+                    required
+                  />
+
+                  <label className="block text-base text-primary-dark font-semibold mb-1">
+                    Rate C (Credit)
+                  </label>
+                  <input
+                    type="number"
+                    name="rateC"
+                    value={formData.rateC}
+                    onChange={handleInputChange}
+                    min="0"
+                    step="0.01"
+                    className="w-full px-3 py-2 text-base bg-gray-200 border border-accent-light rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                    required
+                  />
+                </div>
+
+                <div className="mt-4">
                   <button
                     type="submit"
                     className="px-4 py-2 text-base bg-primary hover:bg-primary-dark text-white rounded-lg font-semibold shadow transition mr-2"
@@ -309,6 +376,9 @@ const Admin = () => {
                   <th className="px-6 py-3 text-left text-xs font-medium text-primary-dark uppercase tracking-wider">Name (English)</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-primary-dark uppercase tracking-wider">Name (Hindi)</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-primary-dark uppercase tracking-wider">Unit</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-primary-dark uppercase tracking-wider">Rate A</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-primary-dark uppercase tracking-wider">Rate B</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-primary-dark uppercase tracking-wider">Rate C</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-primary-dark uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
@@ -319,6 +389,9 @@ const Admin = () => {
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-primary-dark">{item.name}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-primary-dark">{item.hindiName}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-primary">{item.unit}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-primary">{item.rateA ?? 0}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-primary">{item.rateB ?? 0}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-primary">{item.rateC ?? 0}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <button
                         onClick={() => handleEdit(item)}

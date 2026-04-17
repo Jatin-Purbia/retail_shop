@@ -12,6 +12,9 @@ const generateEntryId = () => `entry-${Date.now()}-${Math.random().toString(16).
 const normalizeCartItem = (item) => ({
     ...item,
     entryId: item?.entryId ?? generateEntryId(),
+    grade: item?.grade ?? 'A',
+    rate: item?.rate ?? 0,
+    amount: item?.amount ?? '',
 });
 
 // Constants for pagination
@@ -152,6 +155,7 @@ function CustomerPage() {
     const [showNameSuggestions, setShowNameSuggestions] = useState(false);
     const searchInputRef = useRef(null);
     const [selectedItem, setSelectedItem] = useState(null);
+    const [selectedGrade, setSelectedGrade] = useState('A');
     const [deliveryDate, setDeliveryDate] = useState(() => {
         const savedDate = localStorage.getItem('deliveryDate');
         return savedDate ? new Date(savedDate) : new Date();
@@ -167,6 +171,14 @@ function CustomerPage() {
     const [editingItem, setEditingItem] = useState(null);
     const [editQuantity, setEditQuantity] = useState(1);
     const [editUnit, setEditUnit] = useState('कि.ग्रा.');
+    const [editGrade, setEditGrade] = useState('A');
+
+    const getRateByGrade = (item, grade) => {
+        const normalizedGrade = String(grade || 'A').toUpperCase();
+        const key = `rate${normalizedGrade}`;
+        const value = Number(item?.[key]);
+        return Number.isFinite(value) ? value : 0;
+    };
 
     useEffect(() => {
         localStorage.setItem('customerCart', JSON.stringify(cart));
@@ -344,10 +356,15 @@ function CustomerPage() {
         const numericQuantity = parseFloat(quantity) || 0;
         if (numericQuantity <= 0) return;
         
+        const chosenRate = getRateByGrade(selectedItem, selectedGrade);
+
         const cartItem = normalizeCartItem({
             ...selectedItem,
             quantity: numericQuantity,
             unit: selectedUnit,
+            grade: selectedGrade,
+            rate: chosenRate,
+            amount: (numericQuantity * chosenRate).toFixed(2),
         });
 
         // Always add a fresh entry so duplicate selections stay separate
@@ -356,6 +373,7 @@ function CustomerPage() {
         setSearchTerm('');
         setFilteredItems([]);
         setQuantity(1);
+        setSelectedGrade('A');
         setHighlightedIndex(-1);
         setSelectedItem(null);
         if (searchInputRef.current) searchInputRef.current.focus();
@@ -629,21 +647,28 @@ const handleExportPDF = async () => {
         setEditingItem(index);
         setEditQuantity(item.quantity);
         setEditUnit(item.unit);
+        setEditGrade(item.grade || 'A');
     };
 
     const handleSaveEdit = () => {
         if (editingItem !== null) {
             const numericQuantity = parseFloat(editQuantity) || 1;
             const updatedCart = [...cart];
+            const currentItem = updatedCart[editingItem];
+            const chosenRate = getRateByGrade(currentItem, editGrade);
             updatedCart[editingItem] = {
-                ...updatedCart[editingItem],
+                ...currentItem,
                 quantity: numericQuantity,
                 unit: editUnit,
+                grade: editGrade,
+                rate: chosenRate,
+                amount: (numericQuantity * chosenRate).toFixed(2),
             };
             setCart(updatedCart);
             setEditingItem(null);
             setEditQuantity(1);
             setEditUnit('कि.ग्रा.');
+            setEditGrade('A');
         }
     };
 
@@ -651,6 +676,7 @@ const handleExportPDF = async () => {
         setEditingItem(null);
         setEditQuantity(1);
         setEditUnit('कि.ग्रा.');
+        setEditGrade('A');
     };
 
     const handleDeleteItem = (index) => {
@@ -671,6 +697,7 @@ const handleExportPDF = async () => {
             setEditingItem(null);
             setEditQuantity(1);
             setEditUnit('कि.ग्रा.');
+            setEditGrade('A');
         }
     };
 
@@ -829,6 +856,20 @@ const handleExportPDF = async () => {
                         />
                     </div>
                     <div className="flex gap-2 items-end">
+                        <div>
+                            <label className="block text-base text-primary-dark font-semibold mb-1">
+                                Grade
+                            </label>
+                            <select
+                                value={selectedGrade}
+                                onChange={(e) => setSelectedGrade(e.target.value)}
+                                className="w-24 px-3 py-2 text-base bg-gray-200 border border-accent-light rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                            >
+                                <option value="A">A</option>
+                                <option value="B">B</option>
+                                <option value="C">C</option>
+                            </select>
+                        </div>
                         <div className="flex-1">
                             <label className="block text-base text-primary-dark font-semibold mb-1">
                                 इकाई
@@ -906,6 +947,9 @@ const handleExportPDF = async () => {
                                     <th className="px-3 py-2 text-left font-semibold">Product Name</th>
                                     <th className="px-3 py-2 text-left font-semibold">Quantity</th>
                                     <th className="px-3 py-2 text-left font-semibold">Unit</th>
+                                    <th className="px-3 py-2 text-left font-semibold">Grade</th>
+                                    <th className="px-3 py-2 text-left font-semibold">Rate</th>
+                                    <th className="px-3 py-2 text-left font-semibold">Rashi</th>
                                     <th className="px-3 py-2 text-center font-semibold">Actions</th>
                                 </tr>
                             </thead>
@@ -946,6 +990,23 @@ const handleExportPDF = async () => {
                                                 item.unit
                                             )}
                                         </td>
+                                        <td className="px-3 py-2">
+                                            {editingItem === index ? (
+                                                <select
+                                                    value={editGrade}
+                                                    onChange={(e) => setEditGrade(e.target.value)}
+                                                    className="w-20 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-primary"
+                                                >
+                                                    <option value="A">A</option>
+                                                    <option value="B">B</option>
+                                                    <option value="C">C</option>
+                                                </select>
+                                            ) : (
+                                                item.grade || 'A'
+                                            )}
+                                        </td>
+                                        <td className="px-3 py-2">{Number(item.rate || 0).toFixed(2)}</td>
+                                        <td className="px-3 py-2 font-semibold">{item.amount || ''}</td>
                                         <td className="px-3 py-2 text-center">
                                             {editingItem === index ? (
                                                 <div className="flex gap-1 justify-center">
