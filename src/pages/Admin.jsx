@@ -264,14 +264,10 @@ const Admin = () => {
                 </select>
                 <div className="mt-4">
                   <div className="mb-3 rounded-lg border border-accent-light bg-primary-light/10 p-3 text-sm text-primary-dark">
-                    <p className="font-semibold mb-1">Rate Basis (payment timing)</p>
-                    <p>A: Advance payment (about 1 month before)</p>
-                    <p>B: Current/on-time payment (present month)</p>
-                    <p>C: Credit payment (up to about 1 month after)</p>
                   </div>
 
                   <label className="block text-base text-primary-dark font-semibold mb-1">
-                    Rate A (Advance)
+                    Rate A 
                   </label>
                   <input
                     type="number"
@@ -285,7 +281,7 @@ const Admin = () => {
                   />
 
                   <label className="block text-base text-primary-dark font-semibold mb-1">
-                    Rate B (Current)
+                    Rate B
                   </label>
                   <input
                     type="number"
@@ -299,7 +295,7 @@ const Admin = () => {
                   />
 
                   <label className="block text-base text-primary-dark font-semibold mb-1">
-                    Rate C (Credit)
+                    Rate C 
                   </label>
                   <input
                     type="number"
