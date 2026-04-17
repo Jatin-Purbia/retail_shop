@@ -263,8 +263,6 @@ const Admin = () => {
                   <option value="कट्टा">कट्टा</option>
                 </select>
                 <div className="mt-4">
-                  <div className="mb-3 rounded-lg border border-accent-light bg-primary-light/10 p-3 text-sm text-primary-dark">
-                  </div>
 
                   <label className="block text-base text-primary-dark font-semibold mb-1">
                     Rate A 
