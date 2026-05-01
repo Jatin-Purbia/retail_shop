@@ -150,6 +150,7 @@ function CustomerPage() {
     const [customerName, setCustomerName] = useState(() => localStorage.getItem('customerName') || '');
     const [customerNameHindi, setCustomerNameHindi] = useState(() => localStorage.getItem('customerNameHindi') || '');
     const [customerMobile, setCustomerMobile] = useState(() => localStorage.getItem('customerMobile') || '');
+    const [alternateMobile, setAlternateMobile] = useState(() => localStorage.getItem('alternateMobile') || '');
     const [highlightedIndex, setHighlightedIndex] = useState(-1);
     const [nameSuggestions, setNameSuggestions] = useState([]);
     const [showNameSuggestions, setShowNameSuggestions] = useState(false);
@@ -195,6 +196,10 @@ function CustomerPage() {
     useEffect(() => {
         localStorage.setItem('customerMobile', customerMobile);
     }, [customerMobile]);
+
+    useEffect(() => {
+        localStorage.setItem('alternateMobile', alternateMobile);
+    }, [alternateMobile]);
 
     useEffect(() => {
         localStorage.setItem('deliveryDate', deliveryDate.toISOString());
@@ -467,7 +472,7 @@ const handleExportPDF = async () => {
                 <!-- Name / Mobile row — full width below header -->
                 <div style="display:flex;justify-content:space-between;align-items:baseline;font-size:16px;line-height:1.8;margin-bottom:8px;color:#222;padding:2px 4px 4px 4px;min-width:0;">
                     <span style="flex:1;min-width:0;white-space:nowrap;overflow:visible;margin-right:8px;">नाम: ${customerNameHindi || ''}</span>
-                    <span style="white-space:nowrap;flex-shrink:0;">मो. नं. ${customerMobile || ''}</span>
+                    <span style="white-space:nowrap;flex-shrink:0;">मो. नं. ${mobileNumbersText}</span>
                 </div>
 
                 <!-- Items table -->
@@ -578,17 +583,20 @@ const handleExportPDF = async () => {
         setSelectedItem(null);
         setCustomerName('');
         setCustomerMobile('');
+        setAlternateMobile('');
         setDeliveryDate(new Date());
         setDeliveryTimeHindi('सुबह');
 
         localStorage.removeItem('customerCart');
         localStorage.removeItem('customerName');
         localStorage.removeItem('customerMobile');
+        localStorage.removeItem('alternateMobile');
         localStorage.removeItem('deliveryDate');
         localStorage.removeItem('deliveryTimeHindi');
     };
 
     const formattedDeliveryDateBill = formatDate(deliveryDate);
+    const mobileNumbersText = [customerMobile, alternateMobile].filter(Boolean).join(' / ');
     const timeMappingBill = { सुबह: 'सुबह', दोपहर: 'दोपहर', शाम: 'शाम' };
     const hindiDeliveryTimeBill = timeMappingBill[deliveryTimeHindi] || '';
 
@@ -762,6 +770,19 @@ const handleExportPDF = async () => {
                             onChange={(e) => setCustomerMobile(e.target.value)}
                             className="w-full px-3 py-2 text-base bg-gray-200 border border-accent-light rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                             placeholder="मोबाइल नंबर दर्ज करें"
+                            maxLength={10}
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-base text-primary-dark font-semibold mb-1">
+                            वैकल्पिक नंबर
+                        </label>
+                        <input
+                            type="text"
+                            value={alternateMobile}
+                            onChange={(e) => setAlternateMobile(e.target.value)}
+                            className="w-full px-3 py-2 text-base bg-gray-200 border border-accent-light rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                            placeholder="वैकल्पिक नंबर दर्ज करें"
                             maxLength={10}
                         />
                     </div>
@@ -1082,7 +1103,7 @@ const handleExportPDF = async () => {
                     {/* Name / Mobile row — full width, below the header */}
                     <div className="flex justify-between text-base mb-2 text-gray-900 px-1">
                         <span className="flex-1 min-w-0 mr-2 overflow-hidden text-ellipsis whitespace-nowrap">नाम: {customerNameHindi || ''}</span>
-                        <span className="whitespace-nowrap flex-shrink-0">मो. नं. {customerMobile || ''}</span>
+                        <span className="whitespace-nowrap flex-shrink-0">मो. नं. {mobileNumbersText}</span>
                     </div>
 
                    <div className="w-full flex-1 flex justify-center">
