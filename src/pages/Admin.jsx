@@ -485,7 +485,7 @@ function Admin() {
                   <div className="mt-1 text-sm text-primary-light">Transliterating...</div>
                 )}
 
-                {showSuggestions && nameSuggestions.length > 0 && !isTransliterating && (
+                {showSuggestions && activeSuggestionTarget === 'add' && nameSuggestions.length > 0 && !isTransliterating && (
                   <div className="absolute z-10 w-full mt-1 bg-white border border-accent-light rounded-lg shadow-lg">
                     <ul className="py-1 max-h-32 overflow-y-auto">
                       {nameSuggestions.map((suggestion, index) => (
