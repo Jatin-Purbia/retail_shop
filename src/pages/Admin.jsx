@@ -2,6 +2,28 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 
 const API_URL = 'http://localhost:5000/api';
 
+const parseRateForSubmit = (value) => {
+  if (value === '' || value === null || value === undefined) {
+    return null;
+  }
+
+  const numericValue = Number(value);
+  return Number.isFinite(numericValue) ? numericValue : null;
+};
+
+const formatRateForDisplay = (value) => {
+  if (value === null || value === undefined || value === '') {
+    return '';
+  }
+
+  const numericValue = Number(value);
+  if (!Number.isFinite(numericValue) || numericValue === 0) {
+    return '';
+  }
+
+  return numericValue;
+};
+
 const Admin = () => {
   const [items, setItems] = useState([]);
   const [editingItem, setEditingItem] = useState(null);
@@ -129,9 +151,9 @@ const Admin = () => {
 
     const payload = {
       ...formData,
-      rateA: Number(formData.rateA) || 0,
-      rateB: Number(formData.rateB) || 0,
-      rateC: Number(formData.rateC) || 0,
+      rateA: parseRateForSubmit(formData.rateA),
+      rateB: parseRateForSubmit(formData.rateB),
+      rateC: parseRateForSubmit(formData.rateC),
     };
 
     try {
@@ -162,9 +184,9 @@ const Admin = () => {
       name: item.name,
       hindiName: item.hindiName,
       unit: item.unit,
-      rateA: item.rateA ?? '',
-      rateB: item.rateB ?? '',
-      rateC: item.rateC ?? ''
+      rateA: formatRateForDisplay(item.rateA),
+      rateB: formatRateForDisplay(item.rateB),
+      rateC: formatRateForDisplay(item.rateC)
     });
     setNameSuggestions([]);
     setShowSuggestions(false);
@@ -383,9 +405,9 @@ const Admin = () => {
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-primary-dark">{item.name}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-primary-dark">{item.hindiName}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-primary">{item.unit}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-primary">{item.rateA ?? 0}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-primary">{item.rateB ?? 0}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-primary">{item.rateC ?? 0}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-primary">{formatRateForDisplay(item.rateA)}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-primary">{formatRateForDisplay(item.rateB)}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-primary">{formatRateForDisplay(item.rateC)}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <button
                         onClick={() => handleEdit(item)}

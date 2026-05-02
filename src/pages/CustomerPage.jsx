@@ -9,11 +9,29 @@ const API_URL = 'http://localhost:5000/api';
 
 const generateEntryId = () => `entry-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 
+const parseRateValue = (value) => {
+    if (value === null || value === undefined || value === '') {
+        return null;
+    }
+
+    const numericValue = Number(value);
+    if (!Number.isFinite(numericValue) || numericValue === 0) {
+        return null;
+    }
+
+    return numericValue;
+};
+
+const formatRateValue = (value) => {
+    const numericValue = parseRateValue(value);
+    return numericValue === null ? '' : numericValue.toFixed(2);
+};
+
 const normalizeCartItem = (item) => ({
     ...item,
     entryId: item?.entryId ?? generateEntryId(),
     grade: item?.grade ?? 'A',
-    rate: item?.rate ?? 0,
+    rate: parseRateValue(item?.rate),
     amount: item?.amount ?? '',
 });
 
@@ -177,8 +195,7 @@ function CustomerPage() {
     const getRateByGrade = (item, grade) => {
         const normalizedGrade = String(grade || 'A').toUpperCase();
         const key = `rate${normalizedGrade}`;
-        const value = Number(item?.[key]);
-        return Number.isFinite(value) ? value : 0;
+        return parseRateValue(item?.[key]);
     };
 
     useEffect(() => {
@@ -369,7 +386,7 @@ function CustomerPage() {
             unit: selectedUnit,
             grade: selectedGrade,
             rate: chosenRate,
-            amount: (numericQuantity * chosenRate).toFixed(2),
+            amount: chosenRate === null ? '' : (numericQuantity * chosenRate).toFixed(2),
         });
 
         // Always add a fresh entry so duplicate selections stay separate
@@ -670,7 +687,7 @@ const handleExportPDF = async () => {
                 unit: editUnit,
                 grade: editGrade,
                 rate: chosenRate,
-                amount: (numericQuantity * chosenRate).toFixed(2),
+                amount: chosenRate === null ? '' : (numericQuantity * chosenRate).toFixed(2),
             };
             setCart(updatedCart);
             setEditingItem(null);
@@ -1026,7 +1043,7 @@ const handleExportPDF = async () => {
                                                 item.grade || 'A'
                                             )}
                                         </td>
-                                        <td className="px-3 py-2">{Number(item.rate || 0).toFixed(2)}</td>
+                                        <td className="px-3 py-2">{formatRateValue(item.rate)}</td>
                                         <td className="px-3 py-2 font-semibold">{item.amount || ''}</td>
                                         <td className="px-3 py-2 text-center">
                                             {editingItem === index ? (

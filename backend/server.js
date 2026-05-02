@@ -8,6 +8,15 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+const normalizeRateInput = (value) => {
+  if (value === '' || value === null || value === undefined) {
+    return null;
+  }
+
+  const numericValue = Number(value);
+  return Number.isFinite(numericValue) ? numericValue : null;
+};
+
 // MySQL Connection
 const db = mysql.createConnection({
   host: 'localhost',
@@ -33,9 +42,9 @@ const createTableQuery = `
     name VARCHAR(255) NOT NULL,
     hindiName VARCHAR(255) NOT NULL,
     unit VARCHAR(50) NOT NULL,
-    rateA DECIMAL(10,2) NOT NULL DEFAULT 0,
-    rateB DECIMAL(10,2) NOT NULL DEFAULT 0,
-    rateC DECIMAL(10,2) NOT NULL DEFAULT 0
+    rateA DECIMAL(10,2) NULL DEFAULT NULL,
+    rateB DECIMAL(10,2) NULL DEFAULT NULL,
+    rateC DECIMAL(10,2) NULL DEFAULT NULL
   )
 `;
 
@@ -54,25 +63,41 @@ db.query(createTableQuery, (err) => {
 
     const existingColumns = new Set(columnsResult.map((col) => col.Field));
     const requiredRateColumns = [
-      { name: 'rateA', sql: 'ALTER TABLE inventory ADD COLUMN rateA DECIMAL(10,2) NOT NULL DEFAULT 0' },
-      { name: 'rateB', sql: 'ALTER TABLE inventory ADD COLUMN rateB DECIMAL(10,2) NOT NULL DEFAULT 0' },
-      { name: 'rateC', sql: 'ALTER TABLE inventory ADD COLUMN rateC DECIMAL(10,2) NOT NULL DEFAULT 0' },
+      { name: 'rateA', sql: 'ALTER TABLE inventory ADD COLUMN rateA DECIMAL(10,2) NULL DEFAULT NULL' },
+      { name: 'rateB', sql: 'ALTER TABLE inventory ADD COLUMN rateB DECIMAL(10,2) NULL DEFAULT NULL' },
+      { name: 'rateC', sql: 'ALTER TABLE inventory ADD COLUMN rateC DECIMAL(10,2) NULL DEFAULT NULL' },
+    ];
+    const normalizeRateColumns = [
+      'ALTER TABLE inventory MODIFY COLUMN rateA DECIMAL(10,2) NULL DEFAULT NULL',
+      'ALTER TABLE inventory MODIFY COLUMN rateB DECIMAL(10,2) NULL DEFAULT NULL',
+      'ALTER TABLE inventory MODIFY COLUMN rateC DECIMAL(10,2) NULL DEFAULT NULL',
     ];
 
     const missingColumns = requiredRateColumns.filter((col) => !existingColumns.has(col.name));
 
-    if (missingColumns.length === 0) {
+    const schemaUpdates = [
+      ...missingColumns.map((column) => ({
+        label: `${column.name} column`,
+        sql: column.sql,
+      })),
+      ...normalizeRateColumns.map((sql, index) => ({
+        label: `rate schema update ${index + 1}`,
+        sql,
+      })),
+    ];
+
+    if (schemaUpdates.length === 0) {
       console.log('Inventory table ready with rate columns');
       return;
     }
 
-    let pending = missingColumns.length;
-    missingColumns.forEach((column) => {
-      db.query(column.sql, (alterErr) => {
+    let pending = schemaUpdates.length;
+    schemaUpdates.forEach((statement) => {
+      db.query(statement.sql, (alterErr) => {
         if (alterErr) {
-          console.error(`Error adding ${column.name} column:`, alterErr);
+          console.error(`Error running ${statement.label}:`, alterErr);
         } else {
-          console.log(`${column.name} column added`);
+          console.log(`${statement.label} applied`);
         }
 
         pending -= 1;
@@ -123,25 +148,31 @@ app.get('/api/inventory/search', (req, res) => {
 
 // Add new item
 app.post('/api/inventory', (req, res) => {
-  const { name, hindiName, unit, rateA = 0, rateB = 0, rateC = 0 } = req.body;
+  const { name, hindiName, unit, rateA, rateB, rateC } = req.body;
+  const normalizedRateA = normalizeRateInput(rateA);
+  const normalizedRateB = normalizeRateInput(rateB);
+  const normalizedRateC = normalizeRateInput(rateC);
   const query = 'INSERT INTO inventory (name, hindiName, unit, rateA, rateB, rateC) VALUES (?, ?, ?, ?, ?, ?)';
   
-  db.query(query, [name, hindiName, unit, rateA, rateB, rateC], (err, result) => {
+  db.query(query, [name, hindiName, unit, normalizedRateA, normalizedRateB, normalizedRateC], (err, result) => {
     if (err) {
       res.status(500).json({ error: err.message });
       return;
     }
-    res.status(201).json({ id: result.insertId, name, hindiName, unit, rateA, rateB, rateC });
+    res.status(201).json({ id: result.insertId, name, hindiName, unit, rateA: normalizedRateA, rateB: normalizedRateB, rateC: normalizedRateC });
   });
 });
 
 // Update item
 app.put('/api/inventory/:id', (req, res) => {
   const { id } = req.params;
-  const { name, hindiName, unit, rateA = 0, rateB = 0, rateC = 0 } = req.body;
+  const { name, hindiName, unit, rateA, rateB, rateC } = req.body;
+  const normalizedRateA = normalizeRateInput(rateA);
+  const normalizedRateB = normalizeRateInput(rateB);
+  const normalizedRateC = normalizeRateInput(rateC);
   const query = 'UPDATE inventory SET name = ?, hindiName = ?, unit = ?, rateA = ?, rateB = ?, rateC = ? WHERE id = ?';
   
-  db.query(query, [name, hindiName, unit, rateA, rateB, rateC, id], (err, result) => {
+  db.query(query, [name, hindiName, unit, normalizedRateA, normalizedRateB, normalizedRateC, id], (err, result) => {
     if (err) {
       res.status(500).json({ error: err.message });
       return;
@@ -150,7 +181,7 @@ app.put('/api/inventory/:id', (req, res) => {
       res.status(404).json({ error: 'Item not found' });
       return;
     }
-    res.json({ id, name, hindiName, unit, rateA, rateB, rateC });
+    res.json({ id, name, hindiName, unit, rateA: normalizedRateA, rateB: normalizedRateB, rateC: normalizedRateC });
   });
 });
 
