@@ -193,6 +193,10 @@ function CustomerPage() {
     const [editGrade, setEditGrade] = useState('A');
 
     const getRateByGrade = (item, grade) => {
+        if (!grade) {
+            return null;
+        }
+
         const normalizedGrade = String(grade || 'A').toUpperCase();
         const key = `rate${normalizedGrade}`;
         return parseRateValue(item?.[key]);
@@ -903,6 +907,7 @@ const handleExportPDF = async () => {
                                 onChange={(e) => setSelectedGrade(e.target.value)}
                                 className="w-24 px-3 py-2 text-base bg-gray-200 border border-accent-light rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                             >
+                                <option value="">None</option>
                                 <option value="A">A</option>
                                 <option value="B">B</option>
                                 <option value="C">C</option>
@@ -1035,12 +1040,13 @@ const handleExportPDF = async () => {
                                                     onChange={(e) => setEditGrade(e.target.value)}
                                                     className="w-20 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-primary"
                                                 >
+                                                    <option value="">None</option>
                                                     <option value="A">A</option>
                                                     <option value="B">B</option>
                                                     <option value="C">C</option>
                                                 </select>
                                             ) : (
-                                                item.grade || 'A'
+                                                item.grade || 'None'
                                             )}
                                         </td>
                                         <td className="px-3 py-2">{formatRateValue(item.rate)}</td>
