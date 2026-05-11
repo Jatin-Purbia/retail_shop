@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import DatePicker from 'react-datepicker';
@@ -146,6 +147,20 @@ function generateTwoColumnTable(cart, page = 0) {
 }
 
 function CustomerPage() {
+    const [searchParams, setSearchParams] = useSearchParams();
+    const navigate = useNavigate();
+    const billIdParam = searchParams.get('billId');
+    const shouldAutoDownload = searchParams.get('download') === '1';
+    const [currentBillId, setCurrentBillId] = useState(() => {
+        if (billIdParam) return Number(billIdParam);
+        const stored = localStorage.getItem('currentBillId');
+        return stored ? Number(stored) : null;
+    });
+    const [isSavingBill, setIsSavingBill] = useState(false);
+    const [saveMessage, setSaveMessage] = useState('');
+    const [isLoadingBill, setIsLoadingBill] = useState(false);
+    const [showSaveModal, setShowSaveModal] = useState(false);
+    const autoDownloadFiredRef = useRef(false);
     const [showClearModal, setShowClearModal] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     const [quantity, setQuantity] = useState(1);
@@ -229,6 +244,59 @@ function CustomerPage() {
     useEffect(() => {
         localStorage.setItem('deliveryTimeHindi', deliveryTimeHindi);
     }, [deliveryTimeHindi]);
+
+    useEffect(() => {
+        if (currentBillId) {
+            localStorage.setItem('currentBillId', String(currentBillId));
+        } else {
+            localStorage.removeItem('currentBillId');
+        }
+    }, [currentBillId]);
+
+    // Load bill from server when billId URL param is provided
+    useEffect(() => {
+        if (!billIdParam) return;
+        const idNum = Number(billIdParam);
+        if (!Number.isFinite(idNum)) return;
+
+        let cancelled = false;
+        setIsLoadingBill(true);
+        (async () => {
+            try {
+                const response = await fetch(`${API_URL}/bills/${idNum}`);
+                if (!response.ok) throw new Error('Failed to load bill');
+                const bill = await response.json();
+                if (cancelled) return;
+
+                setCurrentBillId(bill.id);
+                setCustomerName(bill.customer_name || '');
+                setCustomerNameHindi(bill.customer_name_hindi || '');
+                setCustomerMobile(bill.customer_mobile || '');
+                setAlternateMobile(bill.alternate_mobile || '');
+                if (bill.delivery_date) {
+                    const parsedDate = new Date(bill.delivery_date);
+                    if (!Number.isNaN(parsedDate.getTime())) {
+                        setDeliveryDate(parsedDate);
+                    }
+                }
+                if (bill.delivery_time_hindi) {
+                    setDeliveryTimeHindi(bill.delivery_time_hindi);
+                }
+                const loadedItems = Array.isArray(bill.items) ? bill.items : [];
+                setCart(loadedItems.map(normalizeCartItem));
+                setCurrentPage(0);
+            } catch (error) {
+                console.error('Failed to load bill:', error);
+                alert('Failed to load bill. It may have been deleted.');
+            } finally {
+                if (!cancelled) setIsLoadingBill(false);
+            }
+        })();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [billIdParam]);
 
     const transliterateToHindi = async (text) => {
         if (!text) {
@@ -409,6 +477,97 @@ function CustomerPage() {
         setDeliveryTimeHindi(event.target.value);
     };
 
+    const buildBillPayload = () => {
+        const totalAmount = cart.reduce((sum, item) => {
+            const amt = parseFloat(item.amount);
+            return sum + (Number.isNaN(amt) ? 0 : amt);
+        }, 0);
+
+        let dateForSave = null;
+        if (deliveryDate instanceof Date && !Number.isNaN(deliveryDate.getTime())) {
+            const y = deliveryDate.getFullYear();
+            const m = String(deliveryDate.getMonth() + 1).padStart(2, '0');
+            const d = String(deliveryDate.getDate()).padStart(2, '0');
+            dateForSave = `${y}-${m}-${d}`;
+        }
+
+        return {
+            customer_name: customerName,
+            customer_name_hindi: customerNameHindi,
+            customer_mobile: customerMobile,
+            alternate_mobile: alternateMobile,
+            delivery_date: dateForSave,
+            delivery_time_hindi: deliveryTimeHindi,
+            items: cart,
+            total_amount: totalAmount,
+        };
+    };
+
+    const handleSaveBill = async () => {
+        if (cart.length === 0) {
+            alert('Cart is empty. Add items before saving.');
+            return;
+        }
+
+        setIsSavingBill(true);
+        setSaveMessage('');
+        try {
+            const payload = buildBillPayload();
+            const isUpdate = Boolean(currentBillId);
+            const url = isUpdate ? `${API_URL}/bills/${currentBillId}` : `${API_URL}/bills`;
+            const method = isUpdate ? 'PUT' : 'POST';
+
+            const response = await fetch(url, {
+                method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+            });
+            if (!response.ok) {
+                const errBody = await response.json().catch(() => ({}));
+                throw new Error(errBody.error || 'Failed to save bill');
+            }
+            const saved = await response.json();
+            setCurrentBillId(saved.id);
+            setSaveMessage(isUpdate ? `Bill #${saved.id} updated` : `Saved as Bill #${saved.id}`);
+            setTimeout(() => setSaveMessage(''), 4000);
+        } catch (error) {
+            console.error('Save bill error:', error);
+            alert(`Failed to save bill: ${error.message}`);
+        } finally {
+            setIsSavingBill(false);
+        }
+    };
+
+    const handleNewBill = () => {
+        setCart([]);
+        setSearchTerm('');
+        setFilteredItems([]);
+        setQuantity(1);
+        setHighlightedIndex(-1);
+        setSelectedItem(null);
+        setCustomerName('');
+        setCustomerNameHindi('');
+        setCustomerMobile('');
+        setAlternateMobile('');
+        setDeliveryDate(new Date());
+        setDeliveryTimeHindi('सुबह');
+        setCurrentBillId(null);
+        setSaveMessage('');
+
+        localStorage.removeItem('customerCart');
+        localStorage.removeItem('customerName');
+        localStorage.removeItem('customerNameHindi');
+        localStorage.removeItem('customerMobile');
+        localStorage.removeItem('alternateMobile');
+        localStorage.removeItem('deliveryDate');
+        localStorage.removeItem('deliveryTimeHindi');
+        localStorage.removeItem('currentBillId');
+
+        if (billIdParam) {
+            navigate('/customer', { replace: true });
+        }
+    };
+
 const handleExportPDF = async () => {
     if (cart.length === 0) {
         alert('Your cart is empty. Add items to export.');
@@ -474,7 +633,7 @@ const handleExportPDF = async () => {
         container.innerHTML = `
             <div style="font-family:DejaVu Sans,Arial,sans-serif;color:#222;width:794px;height:1123px;max-width:794px;margin:0;display:flex;flex-direction:column;padding:16px 20px 14px 20px;box-sizing:border-box;position:relative;background:#fff;">
 
-                <!-- Header: box (left) | title+subtitle centered | spacer (right) -->
+                <!-- Header: box (left) | title+subtitle centered | bill number (right) -->
                 <div style="width:100%;display:flex;flex-direction:row;align-items:center;margin-bottom:6px;">
                     <div style="border:1px solid #222;padding:10px 12px;width:210px;min-width:210px;font-size:14px;background:#fff;flex-shrink:0;">
                         <div style="display:flex;align-items:center;margin-bottom:12px;">
@@ -488,7 +647,9 @@ const handleExportPDF = async () => {
                         <div style="font-weight:bold;font-size:22px;color:#222;">! श्री राम जी !!</div>
                         <div style="font-size:15px;color:#222;margin-top:6px;">दिनांक ${formattedDeliveryDateBill} को ${hindiDeliveryTimeBill} तक देना है।</div>
                     </div>
-                    <div style="width:210px;min-width:210px;flex-shrink:0;"></div>
+                    <div style="width:210px;min-width:210px;flex-shrink:0;text-align:right;font-size:14px;color:#222;">
+                        ${currentBillId ? `<div style="font-weight:bold;">Bill No: ${currentBillId}</div>` : ''}
+                    </div>
                 </div>
                 <!-- Name / Mobile row — full width below header -->
                 <div style="display:flex;justify-content:space-between;align-items:baseline;font-size:16px;line-height:1.8;margin-bottom:8px;color:#222;padding:2px 4px 4px 4px;min-width:0;">
@@ -544,8 +705,23 @@ const handleExportPDF = async () => {
         document.body.removeChild(container);
     }
 
-    pdf.save(`bill_${customerName || 'guest'}_${formatDate()}.pdf`);
+    const billNumberPart = currentBillId ? `bill-${currentBillId}_` : '';
+    pdf.save(`${billNumberPart}${customerName || 'guest'}_${formatDate()}.pdf`);
 };
+
+    // Auto-trigger PDF export when ?download=1 is in the URL (after bill loads)
+    useEffect(() => {
+        if (!shouldAutoDownload) return;
+        if (isLoadingBill) return;
+        if (cart.length === 0) return;
+        if (autoDownloadFiredRef.current) return;
+        autoDownloadFiredRef.current = true;
+        handleExportPDF();
+        const next = new URLSearchParams(searchParams);
+        next.delete('download');
+        setSearchParams(next, { replace: true });
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [shouldAutoDownload, isLoadingBill, cart.length]);
 
     // const handleExportExcel = () => {
     //     if (cart.length === 0) {
@@ -603,17 +779,26 @@ const handleExportPDF = async () => {
         setHighlightedIndex(-1);
         setSelectedItem(null);
         setCustomerName('');
+        setCustomerNameHindi('');
         setCustomerMobile('');
         setAlternateMobile('');
         setDeliveryDate(new Date());
         setDeliveryTimeHindi('सुबह');
+        setCurrentBillId(null);
+        setSaveMessage('');
 
         localStorage.removeItem('customerCart');
         localStorage.removeItem('customerName');
+        localStorage.removeItem('customerNameHindi');
         localStorage.removeItem('customerMobile');
         localStorage.removeItem('alternateMobile');
         localStorage.removeItem('deliveryDate');
         localStorage.removeItem('deliveryTimeHindi');
+        localStorage.removeItem('currentBillId');
+
+        if (billIdParam) {
+            navigate('/customer', { replace: true });
+        }
     };
 
     const formattedDeliveryDateBill = formatDate(deliveryDate);
@@ -979,6 +1164,35 @@ const handleExportPDF = async () => {
                     </div>
                 </div>
             )}
+            {showSaveModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+                    <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-sm text-center">
+                        <div className="text-lg font-semibold mb-4">
+                            {currentBillId
+                                ? `क्या आप वाकई Bill #${currentBillId} अपडेट करना चाहते हैं?`
+                                : 'क्या आप वाकई इस बिल को सेव करना चाहते हैं?'}
+                        </div>
+                        <div className="flex justify-center gap-4 mt-2">
+                            <button
+                                className="px-4 py-2 bg-green-600 text-white rounded font-semibold hover:bg-green-700 disabled:opacity-50"
+                                disabled={isSavingBill}
+                                onClick={async () => {
+                                    setShowSaveModal(false);
+                                    await handleSaveBill();
+                                }}
+                            >
+                                Yes
+                            </button>
+                            <button
+                                className="px-4 py-2 bg-gray-300 text-gray-800 rounded font-semibold hover:bg-gray-400"
+                                onClick={() => setShowSaveModal(false)}
+                            >
+                                No
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
                 </div>
 
                 {cart.length > 0 && (
@@ -1107,7 +1321,7 @@ const handleExportPDF = async () => {
                         boxSizing: 'border-box'
                     }}
                 >
-                    {/* Header: box (left) | title+subtitle centered | spacer (right) */}
+                    {/* Header: box (left) | title+subtitle centered | bill number (right) */}
                     <div className="w-full flex flex-row items-center mb-1">
                         <div className="border p-2 text-sm bg-white flex-shrink-0" style={{width:'210px'}}>
                             <div className="flex items-center mb-3">
@@ -1121,7 +1335,9 @@ const handleExportPDF = async () => {
                             <div className="font-bold text-xl text-gray-900">! श्री राम जी !!</div>
                             <div className="text-base text-gray-900 mt-1">{`दिनांक ${formattedDeliveryDateBill} को ${hindiDeliveryTimeBill} तक देना है।`}</div>
                         </div>
-                        <div className="flex-shrink-0" style={{width:'210px'}}></div>
+                        <div className="flex-shrink-0 text-right text-sm text-gray-900" style={{width:'210px'}}>
+                            {currentBillId ? <div className="font-bold">Bill No: {currentBillId}</div> : null}
+                        </div>
                     </div>
                     {/* Name / Mobile row — full width, below the header */}
                     <div className="flex justify-between text-base mb-2 text-gray-900 px-1">
@@ -1257,7 +1473,36 @@ const handleExportPDF = async () => {
                     </div>
                 )}
 
-                <div className="flex justify-end gap-2 mt-4">
+                <div className="flex flex-wrap justify-end items-center gap-2 mt-4">
+                    {saveMessage && (
+                        <span className="mr-auto text-base font-semibold text-green-700">
+                            {saveMessage}
+                        </span>
+                    )}
+                    {currentBillId && (
+                        <span className="mr-2 text-base font-semibold text-primary-dark">
+                            Editing Bill #{currentBillId}
+                        </span>
+                    )}
+                    <button
+                        onClick={handleNewBill}
+                        className="px-4 py-2 text-base bg-gray-500 hover:bg-gray-600 text-white rounded-lg font-semibold shadow transition"
+                    >
+                        New Bill
+                    </button>
+                    <button
+                        onClick={() => {
+                            if (cart.length === 0) {
+                                alert('Cart is empty. Add items before saving.');
+                                return;
+                            }
+                            setShowSaveModal(true);
+                        }}
+                        disabled={isSavingBill}
+                        className="px-4 py-2 text-base bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold shadow transition disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        {isSavingBill ? 'Saving...' : (currentBillId ? 'Update Bill' : 'Save Bill')}
+                    </button>
                     <button
                         onClick={handleExportPDF}
                         className="px-4 py-2 text-base bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-semibold shadow transition"

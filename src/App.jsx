@@ -8,6 +8,7 @@ import {
 } from 'react-router-dom';
 import Admin from './pages/Admin';
 import CustomerPage from './pages/CustomerPage';
+import SavedBills from './pages/SavedBills';
 import LandingPage from './pages/LandingPage';
 import './index.css';
 import { useState } from 'react';
@@ -17,6 +18,7 @@ function LayoutWithNavbar() {
   const location = useLocation();
   const isAdminActive = location.pathname === '/admin';
   const isCustomerActive = location.pathname === '/customer';
+  const isSavedBillsActive = location.pathname === '/saved-bills';
 
   const linkBaseClasses =
     'inline-flex items-center px-6 py-2 rounded-md text-lg font-medium transition-colors duration-200';
@@ -46,6 +48,16 @@ function LayoutWithNavbar() {
                 }`}
               >
                 Customer
+              </Link>
+              <Link
+                to="/saved-bills"
+                className={`${linkBaseClasses} ${
+                  isSavedBillsActive
+                    ? 'bg-primary text-white shadow'
+                    : 'text-gray-600 hover:text-blue-600 hover:bg-blue-50'
+                }`}
+              >
+                Saved Bills
               </Link>
             </div>
           </div>
@@ -78,6 +90,7 @@ function App() {
         <Route element={<LayoutWithNavbar />}>
           <Route path="/admin" element={<Admin />} />
           <Route path="/customer" element={<CustomerPage />} />
+          <Route path="/saved-bills" element={<SavedBills />} />
         </Route>
       </Routes>
     </BrowserRouter>

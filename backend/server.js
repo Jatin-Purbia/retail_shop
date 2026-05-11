@@ -21,8 +21,8 @@ const normalizeRateInput = (value) => {
 const db = mysql.createConnection({
   host: 'localhost',
   user: 'root',
-  password: 'ADMIN', 
-  // password: 'jatin@0182', // Update with your MySQL password
+  // password: 'ADMIN', 
+  password: 'jatin@0182', // Update with your MySQL password
   database: 'retail_shop'
 });
 
@@ -106,6 +106,266 @@ db.query(createTableQuery, (err) => {
         }
       });
     });
+  });
+});
+
+// Create bills table — id is the bill number, auto-incrementing from 1
+const createBillsTableQuery = `
+  CREATE TABLE IF NOT EXISTS bills (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    customer_name VARCHAR(255) NULL,
+    customer_name_hindi VARCHAR(255) NULL,
+    customer_mobile VARCHAR(32) NULL,
+    alternate_mobile VARCHAR(32) NULL,
+    delivery_date DATE NULL,
+    delivery_time_hindi VARCHAR(32) NULL,
+    items LONGTEXT NULL,
+    total_amount DECIMAL(12,2) NULL DEFAULT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+  )
+`;
+
+db.query(createBillsTableQuery, (err) => {
+  if (err) {
+    console.error('Error creating bills table:', err);
+    return;
+  }
+
+  // Add any missing columns for older databases that already had a `bills` table.
+  db.query('SHOW COLUMNS FROM bills', (columnsErr, columnsResult) => {
+    if (columnsErr) {
+      console.error('Error reading bills columns:', columnsErr);
+      return;
+    }
+
+    const existingColumns = new Set(columnsResult.map((col) => col.Field));
+    const knownColumns = new Set([
+      'id', 'customer_name', 'customer_name_hindi', 'customer_mobile', 'alternate_mobile',
+      'delivery_date', 'delivery_time_hindi', 'items', 'total_amount', 'created_at', 'updated_at',
+    ]);
+    const requiredColumns = [
+      { name: 'customer_name', sql: 'ALTER TABLE bills ADD COLUMN customer_name VARCHAR(255) NULL' },
+      { name: 'customer_name_hindi', sql: 'ALTER TABLE bills ADD COLUMN customer_name_hindi VARCHAR(255) NULL' },
+      { name: 'customer_mobile', sql: 'ALTER TABLE bills ADD COLUMN customer_mobile VARCHAR(32) NULL' },
+      { name: 'alternate_mobile', sql: 'ALTER TABLE bills ADD COLUMN alternate_mobile VARCHAR(32) NULL' },
+      { name: 'delivery_date', sql: 'ALTER TABLE bills ADD COLUMN delivery_date DATE NULL' },
+      { name: 'delivery_time_hindi', sql: 'ALTER TABLE bills ADD COLUMN delivery_time_hindi VARCHAR(32) NULL' },
+      { name: 'items', sql: 'ALTER TABLE bills ADD COLUMN items LONGTEXT NULL' },
+      { name: 'total_amount', sql: 'ALTER TABLE bills ADD COLUMN total_amount DECIMAL(12,2) NULL DEFAULT NULL' },
+      { name: 'created_at', sql: 'ALTER TABLE bills ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP' },
+      { name: 'updated_at', sql: 'ALTER TABLE bills ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP' },
+    ];
+
+    const migrations = requiredColumns
+      .filter((col) => !existingColumns.has(col.name))
+      .map((col) => ({ label: `add ${col.name} column`, sql: col.sql }));
+
+    // Any legacy NOT NULL column with no default (besides id/auto-increment) would
+    // break our INSERT — relax them so the table accepts the new payload shape.
+    columnsResult.forEach((col) => {
+      if (knownColumns.has(col.Field)) return;
+      if (col.Extra && col.Extra.includes('auto_increment')) return;
+      const isNotNull = col.Null === 'NO';
+      const hasNoDefault = col.Default === null || col.Default === undefined;
+      if (isNotNull && hasNoDefault) {
+        migrations.push({
+          label: `relax legacy column ${col.Field}`,
+          sql: `ALTER TABLE bills MODIFY COLUMN \`${col.Field}\` ${col.Type} NULL DEFAULT NULL`,
+        });
+      }
+    });
+
+    if (migrations.length === 0) {
+      console.log('Bills table ready');
+      return;
+    }
+
+    let pending = migrations.length;
+    migrations.forEach((migration) => {
+      db.query(migration.sql, (alterErr) => {
+        if (alterErr) {
+          console.error(`Error running ${migration.label}:`, alterErr);
+        } else {
+          console.log(`${migration.label} applied`);
+        }
+        pending -= 1;
+        if (pending === 0) {
+          console.log('Bills table ready');
+        }
+      });
+    });
+  });
+});
+
+const parseBillRow = (row) => {
+  if (!row) return null;
+  let items = [];
+  if (row.items) {
+    try {
+      items = typeof row.items === 'string' ? JSON.parse(row.items) : row.items;
+    } catch (e) {
+      console.error('Failed to parse items JSON for bill', row.id, e);
+      items = [];
+    }
+  }
+  return { ...row, items };
+};
+
+// List all bills (summary only — no items payload for speed)
+app.get('/api/bills', (req, res) => {
+  const query = `
+    SELECT id, customer_name, customer_name_hindi, customer_mobile, alternate_mobile,
+           delivery_date, delivery_time_hindi, total_amount, created_at, updated_at
+    FROM bills
+    ORDER BY id DESC
+  `;
+  db.query(query, (err, results) => {
+    if (err) {
+      res.status(500).json({ error: err.message });
+      return;
+    }
+    res.json(results);
+  });
+});
+
+// Get a single bill with items
+app.get('/api/bills/:id', (req, res) => {
+  const { id } = req.params;
+  db.query('SELECT * FROM bills WHERE id = ?', [id], (err, results) => {
+    if (err) {
+      res.status(500).json({ error: err.message });
+      return;
+    }
+    if (results.length === 0) {
+      res.status(404).json({ error: 'Bill not found' });
+      return;
+    }
+    res.json(parseBillRow(results[0]));
+  });
+});
+
+// Create a new bill — returns the new auto-incremented bill number as id
+app.post('/api/bills', (req, res) => {
+  const {
+    customer_name,
+    customer_name_hindi,
+    customer_mobile,
+    alternate_mobile,
+    delivery_date,
+    delivery_time_hindi,
+    items,
+    total_amount,
+  } = req.body;
+
+  const itemsJson = JSON.stringify(Array.isArray(items) ? items : []);
+  const normalizedTotal = normalizeRateInput(total_amount);
+
+  const query = `
+    INSERT INTO bills
+      (customer_name, customer_name_hindi, customer_mobile, alternate_mobile,
+       delivery_date, delivery_time_hindi, items, total_amount)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+  `;
+  const params = [
+    customer_name || null,
+    customer_name_hindi || null,
+    customer_mobile || null,
+    alternate_mobile || null,
+    delivery_date || null,
+    delivery_time_hindi || null,
+    itemsJson,
+    normalizedTotal,
+  ];
+
+  db.query(query, params, (err, result) => {
+    if (err) {
+      res.status(500).json({ error: err.message });
+      return;
+    }
+    db.query('SELECT * FROM bills WHERE id = ?', [result.insertId], (selectErr, selectResults) => {
+      if (selectErr) {
+        res.status(500).json({ error: selectErr.message });
+        return;
+      }
+      res.status(201).json(parseBillRow(selectResults[0]));
+    });
+  });
+});
+
+// Update an existing bill
+app.put('/api/bills/:id', (req, res) => {
+  const { id } = req.params;
+  const {
+    customer_name,
+    customer_name_hindi,
+    customer_mobile,
+    alternate_mobile,
+    delivery_date,
+    delivery_time_hindi,
+    items,
+    total_amount,
+  } = req.body;
+
+  const itemsJson = JSON.stringify(Array.isArray(items) ? items : []);
+  const normalizedTotal = normalizeRateInput(total_amount);
+
+  const query = `
+    UPDATE bills SET
+      customer_name = ?,
+      customer_name_hindi = ?,
+      customer_mobile = ?,
+      alternate_mobile = ?,
+      delivery_date = ?,
+      delivery_time_hindi = ?,
+      items = ?,
+      total_amount = ?
+    WHERE id = ?
+  `;
+  const params = [
+    customer_name || null,
+    customer_name_hindi || null,
+    customer_mobile || null,
+    alternate_mobile || null,
+    delivery_date || null,
+    delivery_time_hindi || null,
+    itemsJson,
+    normalizedTotal,
+    id,
+  ];
+
+  db.query(query, params, (err, result) => {
+    if (err) {
+      res.status(500).json({ error: err.message });
+      return;
+    }
+    if (result.affectedRows === 0) {
+      res.status(404).json({ error: 'Bill not found' });
+      return;
+    }
+    db.query('SELECT * FROM bills WHERE id = ?', [id], (selectErr, selectResults) => {
+      if (selectErr) {
+        res.status(500).json({ error: selectErr.message });
+        return;
+      }
+      res.json(parseBillRow(selectResults[0]));
+    });
+  });
+});
+
+// Delete a bill
+app.delete('/api/bills/:id', (req, res) => {
+  const { id } = req.params;
+  db.query('DELETE FROM bills WHERE id = ?', [id], (err, result) => {
+    if (err) {
+      res.status(500).json({ error: err.message });
+      return;
+    }
+    if (result.affectedRows === 0) {
+      res.status(404).json({ error: 'Bill not found' });
+      return;
+    }
+    res.json({ message: 'Bill deleted successfully' });
   });
 });
 
