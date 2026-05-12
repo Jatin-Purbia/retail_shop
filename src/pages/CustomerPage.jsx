@@ -157,6 +157,10 @@ function CustomerPage() {
     const [isSavingBill, setIsSavingBill] = useState(false);
     const [saveMessage, setSaveMessage] = useState('');
     const [isLoadingBill, setIsLoadingBill] = useState(false);
+    const [nextBillNumber, setNextBillNumber] = useState(() => {
+        const cached = Number(localStorage.getItem('nextBillNumber'));
+        return Number.isFinite(cached) && cached > 0 ? cached : 1;
+    });
     const [showSaveModal, setShowSaveModal] = useState(false);
     const [showClearModal, setShowClearModal] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
@@ -248,6 +252,32 @@ function CustomerPage() {
         } else {
             localStorage.removeItem('currentBillId');
         }
+    }, [currentBillId]);
+
+    const refreshNextBillNumber = async () => {
+        try {
+            const response = await fetch(`${API_URL}/bills/next-number`);
+            if (!response.ok) throw new Error('Failed to fetch next bill number');
+            const data = await response.json();
+            const value = Number(data.nextNumber);
+            if (Number.isFinite(value) && value > 0) {
+                setNextBillNumber(value);
+                localStorage.setItem('nextBillNumber', String(value));
+            }
+        } catch (error) {
+            console.error('Next bill number fetch error:', error);
+        }
+    };
+
+    // Preview of the next bill number (count of saved bills + 1) — kept in sync
+    // with the server on mount, after save/clear, and when the tab regains focus.
+    useEffect(() => {
+        refreshNextBillNumber();
+        const onFocus = () => refreshNextBillNumber();
+        window.addEventListener('focus', onFocus);
+        return () => {
+            window.removeEventListener('focus', onFocus);
+        };
     }, [currentBillId]);
 
     // Load bill from server when billId URL param is provided
@@ -524,8 +554,15 @@ function CustomerPage() {
                 throw new Error(errBody.error || 'Failed to save bill');
             }
             const saved = await response.json();
-            setCurrentBillId(saved.id);
-            setSaveMessage(isUpdate ? `Bill #${saved.id} updated` : `Saved as Bill #${saved.id}`);
+            const message = isUpdate ? `Bill #${saved.id} updated` : `Saved as Bill #${saved.id}`;
+            if (!isUpdate) {
+                const predicted = Number(saved.id) + 1;
+                setNextBillNumber(predicted);
+                localStorage.setItem('nextBillNumber', String(predicted));
+            }
+            handleClearCart();
+            await refreshNextBillNumber();
+            setSaveMessage(message);
             setTimeout(() => setSaveMessage(''), 4000);
         } catch (error) {
             console.error('Save bill error:', error);
@@ -543,7 +580,7 @@ const handleExportPDF = async () => {
     try {
         await exportBillPdf({
             items: cart,
-            billId: currentBillId,
+            billId: currentBillId ?? nextBillNumber,
             customerName,
             customerNameHindi,
             customerMobile,
@@ -1201,7 +1238,7 @@ const handleExportPDF = async () => {
                             <div className="text-base text-gray-900 mt-1">{`दिनांक ${formattedDeliveryDateBill} को ${hindiDeliveryTimeBill} तक देना है।`}</div>
                         </div>
                         <div className="flex-shrink-0 text-right text-base text-gray-900" style={{width:'210px'}}>
-                            <div className="font-bold">Bill No: {currentBillId ?? '—'}</div>
+                            <div className="font-bold">Bill No: {currentBillId ?? nextBillNumber}</div>
                         </div>
                     </div>
                     {/* Name / Mobile row — full width, below the header */}
