@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
+import { exportBillPdf } from '../utils/billPdf';
 
 const API_URL = 'http://localhost:5000/api';
 
@@ -24,6 +25,8 @@ function SavedBills() {
     const [error, setError] = useState('');
     const [search, setSearch] = useState('');
     const [deletingId, setDeletingId] = useState(null);
+    const [downloadingId, setDownloadingId] = useState(null);
+    const [pendingAction, setPendingAction] = useState(null);
 
     const loadBills = async () => {
         setIsLoading(true);
@@ -58,16 +61,38 @@ function SavedBills() {
         });
     }, [bills, search]);
 
-    const handleEdit = (bill) => {
+    const doEdit = (bill) => {
         navigate(`/customer?billId=${bill.id}`);
     };
 
-    const handleDownload = (bill) => {
-        navigate(`/customer?billId=${bill.id}&download=1`);
+    const doDownload = async (bill) => {
+        setDownloadingId(bill.id);
+        try {
+            const response = await fetch(`${API_URL}/bills/${bill.id}`);
+            if (!response.ok) {
+                const errBody = await response.json().catch(() => ({}));
+                throw new Error(errBody.error || 'Failed to fetch bill');
+            }
+            const full = await response.json();
+            await exportBillPdf({
+                items: Array.isArray(full.items) ? full.items : [],
+                billId: full.id,
+                customerName: full.customer_name || '',
+                customerNameHindi: full.customer_name_hindi || '',
+                customerMobile: full.customer_mobile || '',
+                alternateMobile: full.alternate_mobile || '',
+                deliveryDate: full.delivery_date || null,
+                deliveryTimeHindi: full.delivery_time_hindi || '',
+            });
+        } catch (err) {
+            console.error(err);
+            alert(`Failed to download bill: ${err.message}`);
+        } finally {
+            setDownloadingId(null);
+        }
     };
 
-    const handleDelete = async (bill) => {
-        if (!window.confirm(`Delete Bill #${bill.id}? This cannot be undone.`)) return;
+    const doDelete = async (bill) => {
         setDeletingId(bill.id);
         try {
             const response = await fetch(`${API_URL}/bills/${bill.id}`, { method: 'DELETE' });
@@ -84,20 +109,44 @@ function SavedBills() {
         }
     };
 
+    const confirmationCopy = (action, bill) => {
+        if (!action || !bill) return { title: '', confirmLabel: 'Yes', confirmClass: '' };
+        if (action === 'edit') {
+            return {
+                title: `Open Bill #${bill.id} for editing? Any unsaved bill on the Customer page will be replaced.`,
+                confirmLabel: 'Edit',
+                confirmClass: 'bg-blue-500 hover:bg-blue-600',
+            };
+        }
+        if (action === 'download') {
+            return {
+                title: `Download a PDF of Bill #${bill.id}?`,
+                confirmLabel: 'Download',
+                confirmClass: 'bg-green-600 hover:bg-green-700',
+            };
+        }
+        return {
+            title: `Delete Bill #${bill.id}? This cannot be undone.`,
+            confirmLabel: 'Delete',
+            confirmClass: 'bg-red-500 hover:bg-red-600',
+        };
+    };
+
+    const handleConfirm = async () => {
+        if (!pendingAction) return;
+        const { type, bill } = pendingAction;
+        setPendingAction(null);
+        if (type === 'edit') doEdit(bill);
+        else if (type === 'download') await doDownload(bill);
+        else if (type === 'delete') await doDelete(bill);
+    };
+
     return (
         <div className="flex flex-col p-2 items-center min-h-screen bg-primary-light">
             <div className="bg-white rounded-2xl shadow-2xl p-4 w-full max-w-7xl">
-                <div className="flex flex-wrap justify-between items-center gap-2 mb-4">
-                    <div>
-                        <h1 className="text-2xl font-bold text-primary text-center">Saved Bills</h1>
-                        <p className="text-base text-accent">Manage previously saved bills</p>
-                    </div>
-                    <Link
-                        to="/customer"
-                        className="px-4 py-2 text-base bg-primary hover:bg-primary-dark text-white rounded-lg font-semibold shadow transition"
-                    >
-                        + New Bill
-                    </Link>
+                <div className="mb-4">
+                    <h1 className="text-2xl font-bold text-primary text-center">Saved Bills</h1>
+                    <p className="text-base text-accent text-center">Manage previously saved bills</p>
                 </div>
 
                 <div className="mb-4">
@@ -123,6 +172,31 @@ function SavedBills() {
                         {bills.length === 0 ? 'No saved bills yet.' : 'No bills match your search.'}
                     </div>
                 )}
+
+                {pendingAction && (() => {
+                    const { title, confirmLabel, confirmClass } = confirmationCopy(pendingAction.type, pendingAction.bill);
+                    return (
+                        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+                            <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-sm text-center">
+                                <div className="text-lg font-semibold mb-4">{title}</div>
+                                <div className="flex justify-center gap-4 mt-2">
+                                    <button
+                                        className={`px-4 py-2 text-white rounded font-semibold ${confirmClass}`}
+                                        onClick={handleConfirm}
+                                    >
+                                        {confirmLabel}
+                                    </button>
+                                    <button
+                                        className="px-4 py-2 bg-gray-300 text-gray-800 rounded font-semibold hover:bg-gray-400"
+                                        onClick={() => setPendingAction(null)}
+                                    >
+                                        Cancel
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    );
+                })()}
 
                 {!isLoading && !error && filteredBills.length > 0 && (
                     <div className="overflow-x-auto border border-gray-300 rounded-lg">
@@ -160,19 +234,20 @@ function SavedBills() {
                                         <td className="px-3 py-2">
                                             <div className="flex gap-1 justify-center">
                                                 <button
-                                                    onClick={() => handleEdit(bill)}
+                                                    onClick={() => setPendingAction({ type: 'edit', bill })}
                                                     className="px-2 py-1 text-xs bg-blue-500 hover:bg-blue-600 text-white rounded font-semibold transition"
                                                 >
                                                     Edit
                                                 </button>
                                                 <button
-                                                    onClick={() => handleDownload(bill)}
-                                                    className="px-2 py-1 text-xs bg-green-600 hover:bg-green-700 text-white rounded font-semibold transition"
+                                                    onClick={() => setPendingAction({ type: 'download', bill })}
+                                                    disabled={downloadingId === bill.id}
+                                                    className="px-2 py-1 text-xs bg-green-600 hover:bg-green-700 text-white rounded font-semibold transition disabled:opacity-50"
                                                 >
-                                                    Download
+                                                    {downloadingId === bill.id ? '...' : 'Download'}
                                                 </button>
                                                 <button
-                                                    onClick={() => handleDelete(bill)}
+                                                    onClick={() => setPendingAction({ type: 'delete', bill })}
                                                     disabled={deletingId === bill.id}
                                                     className="px-2 py-1 text-xs bg-red-500 hover:bg-red-600 text-white rounded font-semibold transition disabled:opacity-50"
                                                 >

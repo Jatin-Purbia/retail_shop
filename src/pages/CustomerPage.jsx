@@ -1,10 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import 'react-simple-keyboard/build/css/index.css';
+import { exportBillPdf } from '../utils/billPdf';
 
 const API_URL = 'http://localhost:5000/api';
 
@@ -147,10 +146,9 @@ function generateTwoColumnTable(cart, page = 0) {
 }
 
 function CustomerPage() {
-    const [searchParams, setSearchParams] = useSearchParams();
+    const [searchParams] = useSearchParams();
     const navigate = useNavigate();
     const billIdParam = searchParams.get('billId');
-    const shouldAutoDownload = searchParams.get('download') === '1';
     const [currentBillId, setCurrentBillId] = useState(() => {
         if (billIdParam) return Number(billIdParam);
         const stored = localStorage.getItem('currentBillId');
@@ -160,7 +158,6 @@ function CustomerPage() {
     const [saveMessage, setSaveMessage] = useState('');
     const [isLoadingBill, setIsLoadingBill] = useState(false);
     const [showSaveModal, setShowSaveModal] = useState(false);
-    const autoDownloadFiredRef = useRef(false);
     const [showClearModal, setShowClearModal] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     const [quantity, setQuantity] = useState(1);
@@ -538,190 +535,27 @@ function CustomerPage() {
         }
     };
 
-    const handleNewBill = () => {
-        setCart([]);
-        setSearchTerm('');
-        setFilteredItems([]);
-        setQuantity(1);
-        setHighlightedIndex(-1);
-        setSelectedItem(null);
-        setCustomerName('');
-        setCustomerNameHindi('');
-        setCustomerMobile('');
-        setAlternateMobile('');
-        setDeliveryDate(new Date());
-        setDeliveryTimeHindi('सुबह');
-        setCurrentBillId(null);
-        setSaveMessage('');
-
-        localStorage.removeItem('customerCart');
-        localStorage.removeItem('customerName');
-        localStorage.removeItem('customerNameHindi');
-        localStorage.removeItem('customerMobile');
-        localStorage.removeItem('alternateMobile');
-        localStorage.removeItem('deliveryDate');
-        localStorage.removeItem('deliveryTimeHindi');
-        localStorage.removeItem('currentBillId');
-
-        if (billIdParam) {
-            navigate('/customer', { replace: true });
-        }
-    };
-
 const handleExportPDF = async () => {
     if (cart.length === 0) {
         alert('Your cart is empty. Add items to export.');
         return;
     }
-
-    const ROWS_PER_SIDE = 22;
-    const ITEMS_PER_PAGE = ROWS_PER_SIDE * 2;
-    const totalPages = Math.ceil(cart.length / ITEMS_PER_PAGE);
-
-    const pdf = new jsPDF({
-        orientation: 'portrait',
-        unit: 'mm',
-        format: 'a4',
-        compress: true
-    });
-
-    // Helper to render a bill page in a hidden div
-    const renderBillPage = (pageIdx) => {
-        // Create a container
-        const container = document.createElement('div');
-        container.style.position = 'absolute';
-        container.style.left = '-9999px';
-        container.style.top = '0';
-        container.style.width = '794px';
-        container.style.height = '1123px';
-        container.style.background = '#fff';
-        container.style.overflow = 'hidden';
-        document.body.appendChild(container);
-
-        // Generate billItems for this page
-        const billItems = generateTwoColumnTable(cart, pageIdx);
-
-        // Build the HTML for the bill (copy from your JSX, but as HTML string)
-        // For brevity, only the table and key info are rendered
-        const formattedDeliveryDateBill = formatDate(deliveryDate);
-        const timeMappingBill = { सुबह: 'सुबह', दोपहर: 'दोपहर', शाम: 'शाम' };
-        const hindiDeliveryTimeBill = timeMappingBill[deliveryTimeHindi] || '';
-        let tableRows = '';
-        for (let idx = 0; idx < 22; idx++) {
-            tableRows += `
-                <tr style="height:32px;">
-                    <td style="border:1px solid #222;text-align:center;width:20%;font-size:18px;">${billItems[idx]?.left?.name || ''}</td>
-                    <td style="border:1px solid #222;text-align:center;width:14%;font-size:16px;">${billItems[idx]?.left?.quantity || ''}</td>
-                    <td style="border:1px solid #222;text-align:center;width:14%;font-size:14px;">${billItems[idx]?.left?.amount || ''}</td>
-                    <td style="border:1px solid #222;width:4%;"></td>
-                    <td style="border:1px solid #222;text-align:center;width:20%;font-size:18px;">${billItems[idx]?.right?.name || ''}</td>
-                    <td style="border:1px solid #222;text-align:center;width:14%;font-size:16px;">${billItems[idx]?.right?.quantity || ''}</td>
-                    <td style="border:1px solid #222;text-align:center;width:14%;font-size:14px;">${billItems[idx]?.right?.amount || ''}</td>
-                </tr>
-            `;
-        }
-        // // Gap row and total row
-        // tableRows += `
-        //     <tr style="height:18px;background:#fff;"><td colspan="7" style="border:none;background:#fff;"></td></tr>
-        //     <tr style="height:32px;background:#f3f4f6;">
-        //         <td colspan="3" style="border:1px solid #222;text-align:right;font-weight:bold;font-size:18px;background:#f3f4f6;padding-right:24px;padding-bottom:10px;">कुल राशि:</td>
-        //         <td style="border:1px solid #222;background:#f3f4f6;"></td>
-        //         <td colspan="3" style="border:1px solid #222;text-align:left;font-weight:bold;font-size:18px;background:#f3f4f6;"></td>
-        //     </tr>
-        // `;
-
-        container.innerHTML = `
-            <div style="font-family:DejaVu Sans,Arial,sans-serif;color:#222;width:794px;height:1123px;max-width:794px;margin:0;display:flex;flex-direction:column;padding:16px 20px 14px 20px;box-sizing:border-box;position:relative;background:#fff;">
-
-                <!-- Header: box (left) | title+subtitle centered | bill number (right) -->
-                <div style="width:100%;display:flex;flex-direction:row;align-items:center;margin-bottom:6px;">
-                    <div style="border:1px solid #222;padding:10px 12px;width:210px;min-width:210px;font-size:14px;background:#fff;flex-shrink:0;">
-                        <div style="display:flex;align-items:center;margin-bottom:12px;">
-                            <span style="font-weight:600;white-space:nowrap;margin-right:6px;">Check By:</span>
-                        </div>
-                        <div style="display:flex;align-items:center;">
-                            <span style="font-weight:600;white-space:nowrap;margin-right:6px;">Delivered By:</span>
-                        </div>
-                    </div>
-                    <div style="flex:1;text-align:center;padding:0 8px;">
-                        <div style="font-weight:bold;font-size:22px;color:#222;">! श्री राम जी !!</div>
-                        <div style="font-size:15px;color:#222;margin-top:6px;">दिनांक ${formattedDeliveryDateBill} को ${hindiDeliveryTimeBill} तक देना है।</div>
-                    </div>
-                    <div style="width:210px;min-width:210px;flex-shrink:0;text-align:right;font-size:14px;color:#222;">
-                        ${currentBillId ? `<div style="font-weight:bold;">Bill No: ${currentBillId}</div>` : ''}
-                    </div>
-                </div>
-                <!-- Name / Mobile row — full width below header -->
-                <div style="display:flex;justify-content:space-between;align-items:baseline;font-size:16px;line-height:1.8;margin-bottom:8px;color:#222;padding:2px 4px 4px 4px;min-width:0;">
-                    <span style="flex:1;min-width:0;white-space:nowrap;overflow:visible;margin-right:8px;">नाम: ${customerNameHindi || ''}</span>
-                    <span style="white-space:nowrap;flex-shrink:0;">मो. नं. ${mobileNumbersText}</span>
-                </div>
-
-                <!-- Items table -->
-                <div style="width:100%;flex:1;display:flex;justify-content:center;">
-                    <table style="width:95%;border-collapse:collapse;font-size:16px;height:100%;">
-                        <thead>
-                            <tr>
-                                <th style="border:1px solid #222;padding:7px;text-align:center;font-weight:bold;width:20%;">उत्पाद</th>
-                                <th style="border:1px solid #222;padding:7px;text-align:center;font-weight:bold;width:14%;">मात्रा</th>
-                                <th style="border:1px solid #222;padding:7px;text-align:center;font-weight:bold;width:14%;">राशि</th>
-                                <th style="border:1px solid #222;padding:7px;width:4%;"></th>
-                                <th style="border:1px solid #222;padding:7px;text-align:center;font-weight:bold;width:20%;">उत्पाद</th>
-                                <th style="border:1px solid #222;padding:7px;text-align:center;font-weight:bold;width:14%;">मात्रा</th>
-                                <th style="border:1px solid #222;padding:7px;text-align:center;font-weight:bold;width:14%;">राशि</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${tableRows}
-                        </tbody>
-                    </table>
-                </div>
-
-                <!-- Note -->
-                <div style="margin-top:12px;border-top:1px solid #aaa;padding-top:7px;font-size:13px;text-align:center;color:#222;">
-                    <span style="font-weight:bold;font-size:14px;margin-right:6px;">नोट:</span>शेष बचा सामान रविवार को वापस नहीं लिया जाएगा। शेष बचा सामान लाने से पूर्व दुकान पर संपर्क करें। सामान के साथ हिसाब वाली पर्ची लाना अनिवार्य है।
-                </div>
-            </div>
-        `;
-        return container;
-    };
-
-    for (let pageIdx = 0; pageIdx < totalPages; pageIdx++) {
-        const container = renderBillPage(pageIdx);
-        // Wait for DOM to paint before capturing
-        // eslint-disable-next-line no-await-in-loop
-        await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
-        // eslint-disable-next-line no-await-in-loop
-        const canvas = await html2canvas(container, {
-            scale: 2,
-            useCORS: true,
-            logging: false,
-            windowWidth: 794,
-            windowHeight: 1123
+    try {
+        await exportBillPdf({
+            items: cart,
+            billId: currentBillId,
+            customerName,
+            customerNameHindi,
+            customerMobile,
+            alternateMobile,
+            deliveryDate,
+            deliveryTimeHindi,
         });
-        const imgData = canvas.toDataURL('image/jpeg', 1.0);
-        if (pageIdx > 0) pdf.addPage();
-        pdf.addImage(imgData, 'JPEG', 0, 0, 210, 297);
-        document.body.removeChild(container);
+    } catch (error) {
+        console.error('Export PDF error:', error);
+        alert(`Failed to export PDF: ${error.message}`);
     }
-
-    const billNumberPart = currentBillId ? `bill-${currentBillId}_` : '';
-    pdf.save(`${billNumberPart}${customerName || 'guest'}_${formatDate()}.pdf`);
 };
-
-    // Auto-trigger PDF export when ?download=1 is in the URL (after bill loads)
-    useEffect(() => {
-        if (!shouldAutoDownload) return;
-        if (isLoadingBill) return;
-        if (cart.length === 0) return;
-        if (autoDownloadFiredRef.current) return;
-        autoDownloadFiredRef.current = true;
-        handleExportPDF();
-        const next = new URLSearchParams(searchParams);
-        next.delete('download');
-        setSearchParams(next, { replace: true });
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [shouldAutoDownload, isLoadingBill, cart.length]);
 
     // const handleExportExcel = () => {
     //     if (cart.length === 0) {
@@ -1132,14 +966,45 @@ const handleExportPDF = async () => {
                     </div>
                 </div>
 
-                <div className="flex justify-between mb-4">
+                <div className="flex flex-wrap justify-between items-center gap-2 mb-4">
                     <h2 className="text-xl font-bold text-primary">Cart Items ({cart.length})</h2>
-                    <button
-                        onClick={() => setShowClearModal(true)}
-                        className="px-4 py-2 text-base bg-red-500 hover:bg-red-600 text-white rounded-lg font-semibold shadow transition"
-                    >
-                        Clear All
-                    </button>
+                    <div className="flex flex-wrap items-center gap-2">
+                        {saveMessage && (
+                            <span className="text-base font-semibold text-green-700">
+                                {saveMessage}
+                            </span>
+                        )}
+                        {currentBillId && (
+                            <span className="text-base font-semibold text-primary-dark">
+                                Editing Bill #{currentBillId}
+                            </span>
+                        )}
+                        <button
+                            onClick={() => {
+                                if (cart.length === 0) {
+                                    alert('Cart is empty. Add items before saving.');
+                                    return;
+                                }
+                                setShowSaveModal(true);
+                            }}
+                            disabled={isSavingBill}
+                            className="px-4 py-2 text-base bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold shadow transition disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            {isSavingBill ? 'Saving...' : (currentBillId ? 'Update Bill' : 'Save Bill')}
+                        </button>
+                        <button
+                            onClick={handleExportPDF}
+                            className="px-4 py-2 text-base bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-semibold shadow transition"
+                        >
+                            Export PDF
+                        </button>
+                        <button
+                            onClick={() => setShowClearModal(true)}
+                            className="px-4 py-2 text-base bg-red-500 hover:bg-red-600 text-white rounded-lg font-semibold shadow transition"
+                        >
+                            Clear All
+                        </button>
+                    </div>
             {showClearModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
                     <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-sm text-center">
@@ -1335,8 +1200,8 @@ const handleExportPDF = async () => {
                             <div className="font-bold text-xl text-gray-900">! श्री राम जी !!</div>
                             <div className="text-base text-gray-900 mt-1">{`दिनांक ${formattedDeliveryDateBill} को ${hindiDeliveryTimeBill} तक देना है।`}</div>
                         </div>
-                        <div className="flex-shrink-0 text-right text-sm text-gray-900" style={{width:'210px'}}>
-                            {currentBillId ? <div className="font-bold">Bill No: {currentBillId}</div> : null}
+                        <div className="flex-shrink-0 text-right text-base text-gray-900" style={{width:'210px'}}>
+                            <div className="font-bold">Bill No: {currentBillId ?? '—'}</div>
                         </div>
                     </div>
                     {/* Name / Mobile row — full width, below the header */}
@@ -1473,43 +1338,6 @@ const handleExportPDF = async () => {
                     </div>
                 )}
 
-                <div className="flex flex-wrap justify-end items-center gap-2 mt-4">
-                    {saveMessage && (
-                        <span className="mr-auto text-base font-semibold text-green-700">
-                            {saveMessage}
-                        </span>
-                    )}
-                    {currentBillId && (
-                        <span className="mr-2 text-base font-semibold text-primary-dark">
-                            Editing Bill #{currentBillId}
-                        </span>
-                    )}
-                    <button
-                        onClick={handleNewBill}
-                        className="px-4 py-2 text-base bg-gray-500 hover:bg-gray-600 text-white rounded-lg font-semibold shadow transition"
-                    >
-                        New Bill
-                    </button>
-                    <button
-                        onClick={() => {
-                            if (cart.length === 0) {
-                                alert('Cart is empty. Add items before saving.');
-                                return;
-                            }
-                            setShowSaveModal(true);
-                        }}
-                        disabled={isSavingBill}
-                        className="px-4 py-2 text-base bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold shadow transition disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                        {isSavingBill ? 'Saving...' : (currentBillId ? 'Update Bill' : 'Save Bill')}
-                    </button>
-                    <button
-                        onClick={handleExportPDF}
-                        className="px-4 py-2 text-base bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-semibold shadow transition"
-                    >
-                        Export PDF
-                    </button>
-                </div>
             </div>
         </div>
     );
