@@ -1238,7 +1238,6 @@ const handleExportPDF = async () => {
                             <div className="text-base text-gray-900 mt-1">{`दिनांक ${formattedDeliveryDateBill} को ${hindiDeliveryTimeBill} तक देना है।`}</div>
                         </div>
                         <div className="flex-shrink-0 text-right text-base text-gray-900" style={{width:'210px'}}>
-                            <div className="font-bold">Bill No: {currentBillId ?? nextBillNumber}</div>
                         </div>
                     </div>
                     {/* Name / Mobile row — full width, below the header */}

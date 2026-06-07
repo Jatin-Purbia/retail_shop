@@ -73,7 +73,6 @@ function buildPageHtml({ billItems, formattedDeliveryDate, hindiDeliveryTime, cu
                     <div style="font-size:15px;color:#222;margin-top:6px;">दिनांक ${formattedDeliveryDate} को ${hindiDeliveryTime} तक देना है।</div>
                 </div>
                 <div style="width:210px;min-width:210px;flex-shrink:0;text-align:right;font-size:15px;color:#222;">
-                    <div style="font-weight:bold;">Bill No: ${billNumberDisplay}</div>
                 </div>
             </div>
             <div style="display:flex;justify-content:space-between;align-items:baseline;font-size:16px;line-height:1.8;margin-bottom:8px;color:#222;padding:2px 4px 4px 4px;min-width:0;">
