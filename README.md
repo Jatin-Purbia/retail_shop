@@ -15,6 +15,11 @@ Log in with the email and password of the user created in step 2 of Setup
 (Supabase -> Authentication -> Users). There are no built-in credentials.
 To reset a password, edit the user in that same Supabase page.
 
+## Login Credentials
+
+Email=bhuramal@gmail.com
+Password=Bhuramal_1234
+
 ## Run
 
 ```bash
