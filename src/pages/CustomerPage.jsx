@@ -5,7 +5,7 @@ import 'react-datepicker/dist/react-datepicker.css';
 import 'react-simple-keyboard/build/css/index.css';
 import { exportBillPdf } from '../utils/billPdf';
 
-const API_URL = 'http://localhost:5000/api';
+import { getBill, createBill, updateBill, searchInventory, getNextBillNumber } from '../lib/api';
 
 const generateEntryId = () => `entry-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 
@@ -156,7 +156,6 @@ function CustomerPage() {
     });
     const [isSavingBill, setIsSavingBill] = useState(false);
     const [saveMessage, setSaveMessage] = useState('');
-    const [isLoadingBill, setIsLoadingBill] = useState(false);
     const [nextBillNumber, setNextBillNumber] = useState(() => {
         const cached = Number(localStorage.getItem('nextBillNumber'));
         return Number.isFinite(cached) && cached > 0 ? cached : 1;
@@ -186,8 +185,6 @@ function CustomerPage() {
     const [customerMobile, setCustomerMobile] = useState(() => localStorage.getItem('customerMobile') || '');
     const [alternateMobile, setAlternateMobile] = useState(() => localStorage.getItem('alternateMobile') || '');
     const [highlightedIndex, setHighlightedIndex] = useState(-1);
-    const [nameSuggestions, setNameSuggestions] = useState([]);
-    const [showNameSuggestions, setShowNameSuggestions] = useState(false);
     const searchInputRef = useRef(null);
     const [selectedItem, setSelectedItem] = useState(null);
     const [selectedGrade, setSelectedGrade] = useState('A');
@@ -196,7 +193,6 @@ function CustomerPage() {
         return savedDate ? new Date(savedDate) : new Date();
     });
     const [deliveryTimeHindi, setDeliveryTimeHindi] = useState(() => localStorage.getItem('deliveryTimeHindi') || 'सुबह');
-    const nameInputRef = useRef(null);
     const billRef = useRef();
     const [isSearching, setIsSearching] = useState(false);
     const [currentPage, setCurrentPage] = useState(0);
@@ -256,10 +252,7 @@ function CustomerPage() {
 
     const refreshNextBillNumber = async () => {
         try {
-            const response = await fetch(`${API_URL}/bills/next-number`);
-            if (!response.ok) throw new Error('Failed to fetch next bill number');
-            const data = await response.json();
-            const value = Number(data.nextNumber);
+            const value = await getNextBillNumber();
             if (Number.isFinite(value) && value > 0) {
                 setNextBillNumber(value);
                 localStorage.setItem('nextBillNumber', String(value));
@@ -287,12 +280,9 @@ function CustomerPage() {
         if (!Number.isFinite(idNum)) return;
 
         let cancelled = false;
-        setIsLoadingBill(true);
         (async () => {
             try {
-                const response = await fetch(`${API_URL}/bills/${idNum}`);
-                if (!response.ok) throw new Error('Failed to load bill');
-                const bill = await response.json();
+                const bill = await getBill(idNum);
                 if (cancelled) return;
 
                 setCurrentBillId(bill.id);
@@ -315,8 +305,6 @@ function CustomerPage() {
             } catch (error) {
                 console.error('Failed to load bill:', error);
                 alert('Failed to load bill. It may have been deleted.');
-            } finally {
-                if (!cancelled) setIsLoadingBill(false);
             }
         })();
 
@@ -369,9 +357,7 @@ function CustomerPage() {
 
         setIsSearching(true);
         try {
-            const response = await fetch(`${API_URL}/inventory/search?q=${encodeURIComponent(value)}`);
-            if (!response.ok) throw new Error('Failed to search items');
-            const data = await response.json();
+            const data = await searchInventory(value);
             
             const dataWithHindiNames = data.map(item => ({
                 ...item,
@@ -410,33 +396,6 @@ function CustomerPage() {
             }
         };
     }, []);
-
-    const handleNameKeyDown = (e) => {
-        if (!nameSuggestions.length) return;
-
-        if (e.key === 'ArrowDown') {
-            e.preventDefault();
-            setHighlightedIndex((prev) => (prev + 1) % nameSuggestions.length);
-        } else if (e.key === 'ArrowUp') {
-            e.preventDefault();
-            setHighlightedIndex((prev) => (prev - 1 + nameSuggestions.length) % nameSuggestions.length);
-        } else if (e.key === 'Enter') {
-            e.preventDefault();
-            if (highlightedIndex >= 0) {
-                const selectedName = nameSuggestions[highlightedIndex];
-                setCustomerName(selectedName);
-                setShowNameSuggestions(false);
-                setHighlightedIndex(-1);
-                if (nameInputRef.current) {
-                    nameInputRef.current.blur();
-                }
-            }
-        } else if (e.key === 'Escape') {
-            e.preventDefault();
-            setShowNameSuggestions(false);
-            setHighlightedIndex(-1);
-        }
-    };
 
     const handleSearchKeyDown = (e) => {
         if (!filteredItems.length) return;
@@ -541,19 +500,9 @@ function CustomerPage() {
         try {
             const payload = buildBillPayload();
             const isUpdate = Boolean(currentBillId);
-            const url = isUpdate ? `${API_URL}/bills/${currentBillId}` : `${API_URL}/bills`;
-            const method = isUpdate ? 'PUT' : 'POST';
-
-            const response = await fetch(url, {
-                method,
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload),
-            });
-            if (!response.ok) {
-                const errBody = await response.json().catch(() => ({}));
-                throw new Error(errBody.error || 'Failed to save bill');
-            }
-            const saved = await response.json();
+            const saved = isUpdate
+                ? await updateBill(currentBillId, payload)
+                : await createBill(payload);
             const message = isUpdate ? `Bill #${saved.id} updated` : `Saved as Bill #${saved.id}`;
             if (!isUpdate) {
                 const predicted = Number(saved.id) + 1;
@@ -693,12 +642,6 @@ const handleExportPDF = async () => {
 
 
     const billItems = generateTwoColumnTable(cart, currentPage);
-
-    // Calculate total price (sum of all 'amount' fields, if present and numeric)
-    const totalPrice = cart.reduce((sum, item) => {
-        const amt = parseFloat(item.amount);
-        return sum + (isNaN(amt) ? 0 : amt);
-    }, 0);
 
     const handleHindiSuggestionClick = (suggestion) => {
         setCustomerNameHindi(suggestion);

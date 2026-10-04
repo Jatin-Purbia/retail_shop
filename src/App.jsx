@@ -4,6 +4,7 @@ import {
   Route,
   Link,
   Outlet,
+  Navigate,
   useLocation,
 } from 'react-router-dom';
 import Admin from './pages/Admin';
@@ -11,14 +12,17 @@ import CustomerPage from './pages/CustomerPage';
 import SavedBills from './pages/SavedBills';
 import LandingPage from './pages/LandingPage';
 import './index.css';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { supabase } from './lib/api';
 
 // Layout with Navbar
-function LayoutWithNavbar() {
+function LayoutWithNavbar({ session }) {
   const location = useLocation();
   const isAdminActive = location.pathname === '/admin';
   const isCustomerActive = location.pathname === '/customer';
   const isSavedBillsActive = location.pathname === '/saved-bills';
+
+  if (!session) return <Navigate to="/" replace />;
 
   const linkBaseClasses =
     'inline-flex items-center px-6 py-2 rounded-md text-lg font-medium transition-colors duration-200';
@@ -60,6 +64,12 @@ function LayoutWithNavbar() {
                 Saved Bills
               </Link>
             </div>
+            <button
+              onClick={() => supabase.auth.signOut()}
+              className="px-4 py-2 rounded-md text-gray-600 hover:text-red-600 hover:bg-red-50"
+            >
+              Log out
+            </button>
           </div>
         </div>
       </nav>
@@ -72,22 +82,24 @@ function LayoutWithNavbar() {
 
 // Root App
 function App() {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [employeeName, setEmployeeName] = useState('');
+  const [session, setSession] = useState(undefined);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => setSession(data.session));
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, next) => setSession(next));
+    return () => listener.subscription.unsubscribe();
+  }, []);
+
+  if (session === undefined) return null;
 
   return (
-    <BrowserRouter basename='/retail_shop'>
+    <BrowserRouter basename="/retail_shop">
       <Routes>
         <Route
           path="/"
-          element={
-            <LandingPage
-              setIsLoggedIn={setIsLoggedIn}
-              setEmployeeName={setEmployeeName}
-            />
-          }
+          element={session ? <Navigate to="/admin" replace /> : <LandingPage />}
         />
-        <Route element={<LayoutWithNavbar />}>
+        <Route element={<LayoutWithNavbar session={session} />}>
           <Route path="/admin" element={<Admin />} />
           <Route path="/customer" element={<CustomerPage />} />
           <Route path="/saved-bills" element={<SavedBills />} />

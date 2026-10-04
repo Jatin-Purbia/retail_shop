@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 
-const API_URL = 'http://localhost:5000/api';
+import { listInventory, addInventoryItem, updateInventoryItem, deleteInventoryItem } from '../lib/api';
 
 const UNIT_OPTIONS = [
   { value: '', label: 'Select Unit' },
@@ -116,10 +116,7 @@ function Admin() {
 
   const fetchItems = async () => {
     try {
-      const response = await fetch(`${API_URL}/inventory`);
-      if (!response.ok) throw new Error('Failed to fetch items');
-      const data = await response.json();
-      setItems(data);
+      setItems(await listInventory());
     } catch (err) {
       setError(err.message);
     } finally {
@@ -238,16 +235,7 @@ function Admin() {
     const payload = buildRatePayload(formData);
 
     try {
-      const response = await fetch(`${API_URL}/inventory`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload),
-      });
-
-      if (!response.ok) throw new Error('Failed to add item');
-      const newItem = await response.json();
+      const newItem = await addInventoryItem(payload);
       setItems((prev) => [...prev, newItem]);
       resetForm();
     } catch (err) {
@@ -318,16 +306,7 @@ function Admin() {
     const payload = buildRatePayload(editFormData);
 
     try {
-      const response = await fetch(`${API_URL}/inventory/${editingItem.id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload),
-      });
-
-      if (!response.ok) throw new Error('Failed to update item');
-      const updatedItem = await response.json();
+      const updatedItem = await updateInventoryItem(editingItem.id, payload);
       setItems((prev) =>
         prev.map((item) => (item.id === editingItem.id ? updatedItem : item))
       );
@@ -341,10 +320,7 @@ function Admin() {
     if (!window.confirm('Are you sure you want to delete this item?')) return;
 
     try {
-      const response = await fetch(`${API_URL}/inventory/${id}`, {
-        method: 'DELETE',
-      });
-      if (!response.ok) throw new Error('Failed to delete item');
+      await deleteInventoryItem(id);
       setItems((prev) => prev.filter((item) => item.id !== id));
     } catch (err) {
       setError(err.message);

@@ -40,7 +40,7 @@ function paginateForBill(items, page) {
     return rows;
 }
 
-function buildPageHtml({ billItems, formattedDeliveryDate, hindiDeliveryTime, customerNameHindi, mobileNumbersText, billNumberDisplay }) {
+function buildPageHtml({ billItems, formattedDeliveryDate, hindiDeliveryTime, customerNameHindi, mobileNumbersText }) {
     let tableRows = '';
     for (let idx = 0; idx < ROWS_PER_SIDE; idx++) {
         const row = billItems[idx] || { left: {}, right: {} };
@@ -123,7 +123,6 @@ export async function exportBillPdf({
     const formattedDeliveryDate = formatDate(parsedDate);
     const hindiDeliveryTime = HINDI_TIME_MAP[deliveryTimeHindi] || '';
     const mobileNumbersText = [customerMobile, alternateMobile].filter(Boolean).join(' / ');
-    const billNumberDisplay = billId ?? '—';
 
     for (let pageIdx = 0; pageIdx < totalPages; pageIdx++) {
         const container = document.createElement('div');
@@ -143,7 +142,6 @@ export async function exportBillPdf({
             hindiDeliveryTime,
             customerNameHindi,
             mobileNumbersText,
-            billNumberDisplay,
         });
 
         // eslint-disable-next-line no-await-in-loop

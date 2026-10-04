@@ -1,31 +1,31 @@
 # Retail Shop
 
-## Run the app
+React + Vite frontend, Supabase (Postgres + Auth) for data. No backend server.
 
-Requires [Node.js](https://nodejs.org/).
+## Setup
 
-1. Install dependencies (first time only):
+1. In Supabase, open **SQL Editor** and run [supabase/schema.sql](supabase/schema.sql).
+2. In **Authentication -> Users**, add a user (email + password) for the shop.
+3. Copy `.env.example` to `.env` and fill in `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY`.
+   Never put the secret key in this project.
 
-   ```bash
-   npm install
-   cd backend
-   npm install
-   cd ..
-   ```
+## Login
 
-2. Start the backend (runs on http://localhost:5000):
+Log in with the email and password of the user created in step 2 of Setup
+(Supabase -> Authentication -> Users). There are no built-in credentials.
+To reset a password, edit the user in that same Supabase page.
 
-   ```bash
-   cd backend
-   npm run dev
-   ```
+## Run
 
-3. In a second terminal, start the frontend from the project root:
+```bash
+npm install
+npm run dev
+```
 
-   ```bash
-   npm run dev
-   ```
+## Deploy (GitHub Pages)
 
-4. Open the URL Vite prints (usually http://localhost:5173).
+Run with `.env` present, since the values are baked in at build time:
 
-To stop the app, close both terminals (or press `Ctrl+C` in each).
+```bash
+npm run deploy
+```

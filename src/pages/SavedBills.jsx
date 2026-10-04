@@ -2,7 +2,7 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { exportBillPdf } from '../utils/billPdf';
 
-const API_URL = 'http://localhost:5000/api';
+import { listBills, getBill, deleteBill } from '../lib/api';
 
 function formatDateString(value) {
     if (!value) return '';
@@ -32,9 +32,7 @@ function SavedBills() {
         setIsLoading(true);
         setError('');
         try {
-            const response = await fetch(`${API_URL}/bills`);
-            if (!response.ok) throw new Error('Failed to load bills');
-            const data = await response.json();
+            const data = await listBills();
             setBills(Array.isArray(data) ? data : []);
         } catch (err) {
             console.error(err);
@@ -68,12 +66,7 @@ function SavedBills() {
     const doDownload = async (bill) => {
         setDownloadingId(bill.id);
         try {
-            const response = await fetch(`${API_URL}/bills/${bill.id}`);
-            if (!response.ok) {
-                const errBody = await response.json().catch(() => ({}));
-                throw new Error(errBody.error || 'Failed to fetch bill');
-            }
-            const full = await response.json();
+            const full = await getBill(bill.id);
             await exportBillPdf({
                 items: Array.isArray(full.items) ? full.items : [],
                 billId: full.id,
@@ -95,11 +88,7 @@ function SavedBills() {
     const doDelete = async (bill) => {
         setDeletingId(bill.id);
         try {
-            const response = await fetch(`${API_URL}/bills/${bill.id}`, { method: 'DELETE' });
-            if (!response.ok) {
-                const errBody = await response.json().catch(() => ({}));
-                throw new Error(errBody.error || 'Failed to delete bill');
-            }
+            await deleteBill(bill.id);
             setBills((prev) => prev.filter((b) => b.id !== bill.id));
         } catch (err) {
             console.error(err);
