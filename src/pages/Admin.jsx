@@ -338,8 +338,8 @@ function Admin() {
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-primary-light">
-        <div className="bg-white rounded-2xl shadow-2xl p-4 w-full max-w-7xl">
+      <div className="flex flex-col items-center">
+        <div className="bg-white rounded-2xl shadow-xl p-3 sm:p-6 w-full max-w-7xl">
           <div className="text-center text-primary">Loading...</div>
         </div>
       </div>
@@ -347,8 +347,8 @@ function Admin() {
   }
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-primary-light">
-      <div className="bg-white rounded-2xl shadow-2xl p-4 w-full max-w-7xl">
+    <div className="flex flex-col items-center">
+      <div className="bg-white rounded-2xl shadow-xl p-3 sm:p-6 w-full max-w-7xl">
         <h1 className="text-2xl font-bold text-primary mb-2 text-center">Inventory Management</h1>
         <p className="text-base text-accent text-center mb-4">Manage your shop&apos;s inventory</p>
 
@@ -358,7 +358,7 @@ function Admin() {
           </div>
         )}
 
-        <div className="bg-white p-6 rounded-lg shadow-md mb-8 border border-primary-light">
+        <div className="bg-white p-4 sm:p-6 rounded-lg shadow-md mb-6 border border-primary-light">
           <h2 className="text-xl font-semibold mb-4 text-primary">Add New Item</h2>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -486,21 +486,21 @@ function Admin() {
             <table className="min-w-full divide-y divide-primary-light">
               <thead className="bg-primary-light sticky top-0">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-primary-dark uppercase tracking-wider">Sr. No.</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-primary-dark uppercase tracking-wider">Name (English)</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-primary-dark uppercase tracking-wider">Name (Hindi)</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-primary-dark uppercase tracking-wider">Unit</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-primary-dark uppercase tracking-wider">Rate A</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-primary-dark uppercase tracking-wider">Rate B</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-primary-dark uppercase tracking-wider">Rate C</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-primary-dark uppercase tracking-wider">Actions</th>
+                  <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-primary-dark uppercase tracking-wider">Sr. No.</th>
+                  <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-primary-dark uppercase tracking-wider">Name (English)</th>
+                  <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-primary-dark uppercase tracking-wider">Name (Hindi)</th>
+                  <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-primary-dark uppercase tracking-wider">Unit</th>
+                  <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-primary-dark uppercase tracking-wider">Rate A</th>
+                  <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-primary-dark uppercase tracking-wider">Rate B</th>
+                  <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-primary-dark uppercase tracking-wider">Rate C</th>
+                  <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-primary-dark uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-primary-light max-h-[400px] overflow-y-auto">
                 {items.map((item, index) => (
                   <tr key={item.id} className="hover:bg-primary-light/10">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-primary">{index + 1}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-primary-dark">
+                    <td className="px-3 sm:px-6 py-3 whitespace-nowrap text-sm text-primary">{index + 1}</td>
+                    <td className="px-3 sm:px-6 py-3 whitespace-nowrap text-sm text-primary-dark">
                       {editingItem?.id === item.id ? (
                         <input
                           type="text"
@@ -513,7 +513,7 @@ function Admin() {
                         item.name
                       )}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-primary-dark">
+                    <td className="px-3 sm:px-6 py-3 whitespace-nowrap text-sm text-primary-dark">
                       {editingItem?.id === item.id ? (
                         <div className="relative">
                           <input
@@ -544,7 +544,7 @@ function Admin() {
                         item.hindiName
                       )}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-primary">
+                    <td className="px-3 sm:px-6 py-3 whitespace-nowrap text-sm text-primary">
                       {editingItem?.id === item.id ? (
                         <select
                           name="unit"
@@ -562,7 +562,7 @@ function Admin() {
                         item.unit
                       )}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-primary">
+                    <td className="px-3 sm:px-6 py-3 whitespace-nowrap text-sm text-primary">
                       {editingItem?.id === item.id ? (
                         <input
                           type="number"
@@ -577,7 +577,7 @@ function Admin() {
                         formatRateForDisplay(item.rateA)
                       )}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-primary">
+                    <td className="px-3 sm:px-6 py-3 whitespace-nowrap text-sm text-primary">
                       {editingItem?.id === item.id ? (
                         <input
                           type="number"
@@ -592,7 +592,7 @@ function Admin() {
                         formatRateForDisplay(item.rateB)
                       )}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-primary">
+                    <td className="px-3 sm:px-6 py-3 whitespace-nowrap text-sm text-primary">
                       {editingItem?.id === item.id ? (
                         <input
                           type="number"
@@ -607,7 +607,7 @@ function Admin() {
                         formatRateForDisplay(item.rateC)
                       )}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                    <td className="px-3 sm:px-6 py-3 whitespace-nowrap text-sm font-medium">
                       {editingItem?.id === item.id ? (
                         <>
                           <button

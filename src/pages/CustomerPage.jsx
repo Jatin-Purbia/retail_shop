@@ -730,9 +730,9 @@ const handleExportPDF = async () => {
     };
 
     return (
-        <div className="flex flex-col p-2 items-center justify-center min-h-screen bg-primary-light overflow-hidden">
-            <div className="bg-white rounded-2xl shadow-2xl p-4 w-full max-w-7xl">
-                <h1 className="text-2xl font-bold text-primary mb-2 text-center">Customer Billing</h1>
+        <div className="flex flex-col items-center">
+            <div className="bg-white rounded-2xl shadow-xl p-3 sm:p-6 w-full max-w-7xl">
+                <h1 className="text-xl sm:text-2xl font-bold text-primary mb-1 text-center">Customer Billing</h1>
                 <p className="text-base text-accent text-center mb-4">Create and manage customer bills</p>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
@@ -896,7 +896,7 @@ const handleExportPDF = async () => {
                             placeholder="Enter quantity"
                         />
                     </div>
-                    <div className="flex gap-2 items-end">
+                    <div className="flex flex-wrap gap-2 items-end">
                         <div>
                             <label className="block text-base text-primary-dark font-semibold mb-1">
                                 Grade
@@ -912,7 +912,7 @@ const handleExportPDF = async () => {
                                 <option value="C">C</option>
                             </select>
                         </div>
-                        <div className="flex-1">
+                        <div className="flex-1 min-w-[110px]">
                             <label className="block text-base text-primary-dark font-semibold mb-1">
                                 इकाई
                             </label>
@@ -938,7 +938,7 @@ const handleExportPDF = async () => {
                         <button
                             type="button"
                             onClick={handleAddToCart}
-                            className="px-4 py-2 text-base bg-primary hover:bg-primary-dark text-white rounded-lg font-semibold shadow transition disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="w-full sm:w-auto px-4 py-2 text-base bg-primary hover:bg-primary-dark text-white rounded-lg font-semibold shadow transition disabled:opacity-50 disabled:cursor-not-allowed"
                             disabled={!selectedItem}
                         >
                             उत्पाद जोड़ें
@@ -947,8 +947,8 @@ const handleExportPDF = async () => {
                 </div>
 
                 <div className="flex flex-wrap justify-between items-center gap-2 mb-4">
-                    <h2 className="text-xl font-bold text-primary">Cart Items ({cart.length})</h2>
-                    <div className="flex flex-wrap items-center gap-2">
+                    <h2 className="text-lg sm:text-xl font-bold text-primary w-full sm:w-auto">Cart Items ({cart.length})</h2>
+                    <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
                         {saveMessage && (
                             <span className="text-base font-semibold text-green-700">
                                 {saveMessage}
@@ -968,25 +968,25 @@ const handleExportPDF = async () => {
                                 setShowSaveModal(true);
                             }}
                             disabled={isSavingBill}
-                            className="px-4 py-2 text-base bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold shadow transition disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="flex-1 sm:flex-none px-4 py-2 text-base bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold shadow transition disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             {isSavingBill ? 'Saving...' : (currentBillId ? 'Update Bill' : 'Save Bill')}
                         </button>
                         <button
                             onClick={handleExportPDF}
-                            className="px-4 py-2 text-base bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-semibold shadow transition"
+                            className="flex-1 sm:flex-none px-4 py-2 text-base bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-semibold shadow transition"
                         >
                             Export PDF
                         </button>
                         <button
                             onClick={() => setShowClearModal(true)}
-                            className="px-4 py-2 text-base bg-red-500 hover:bg-red-600 text-white rounded-lg font-semibold shadow transition"
+                            className="flex-1 sm:flex-none px-4 py-2 text-base bg-red-500 hover:bg-red-600 text-white rounded-lg font-semibold shadow transition"
                         >
                             Clear All
                         </button>
                     </div>
             {showClearModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40 p-4">
                     <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-sm text-center">
                         <div className="text-lg font-semibold mb-4">क्या आप वाकई सभी आइटम्स हटाना चाहते हैं?</div>
                         <div className="flex justify-center gap-4 mt-2">
@@ -1010,7 +1010,7 @@ const handleExportPDF = async () => {
                 </div>
             )}
             {showSaveModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40 p-4">
                     <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-sm text-center">
                         <div className="text-lg font-semibold mb-4">
                             {currentBillId
@@ -1041,8 +1041,8 @@ const handleExportPDF = async () => {
                 </div>
 
                 {cart.length > 0 && (
-                    <div className="mb-4 max-h-64 overflow-y-auto border border-gray-300 rounded-lg">
-                        <table className="w-full text-sm">
+                    <div className="mb-4 max-h-72 overflow-auto border border-gray-300 rounded-lg">
+                        <table className="w-full text-sm whitespace-nowrap">
                             <thead className="bg-gray-100 sticky top-0">
                                 <tr>
                                     <th className="px-3 py-2 text-left font-semibold">S.No.</th>
@@ -1115,13 +1115,13 @@ const handleExportPDF = async () => {
                                                 <div className="flex gap-1 justify-center">
                                                     <button
                                                         onClick={handleSaveEdit}
-                                                        className="px-2 py-1 text-xs bg-green-500 hover:bg-green-600 text-white rounded font-semibold transition"
+                                                        className="px-3 py-1.5 text-xs bg-green-500 hover:bg-green-600 text-white rounded font-semibold transition"
                                                     >
                                                         Save
                                                     </button>
                                                     <button
                                                         onClick={handleCancelEdit}
-                                                        className="px-2 py-1 text-xs bg-gray-500 hover:bg-gray-600 text-white rounded font-semibold transition"
+                                                        className="px-3 py-1.5 text-xs bg-gray-500 hover:bg-gray-600 text-white rounded font-semibold transition"
                                                     >
                                                         Cancel
                                                     </button>
@@ -1130,13 +1130,13 @@ const handleExportPDF = async () => {
                                                 <div className="flex gap-1 justify-center">
                                                     <button
                                                         onClick={() => handleEditItem(index)}
-                                                        className="px-2 py-1 text-xs bg-blue-500 hover:bg-blue-600 text-white rounded font-semibold transition"
+                                                        className="px-3 py-1.5 text-xs bg-blue-500 hover:bg-blue-600 text-white rounded font-semibold transition"
                                                     >
                                                         Edit
                                                     </button>
                                                     <button
                                                         onClick={() => handleDeleteItem(index)}
-                                                        className="px-2 py-1 text-xs bg-red-500 hover:bg-red-600 text-white rounded font-semibold transition"
+                                                        className="px-3 py-1.5 text-xs bg-red-500 hover:bg-red-600 text-white rounded font-semibold transition"
                                                     >
                                                         Delete
                                                     </button>
@@ -1150,6 +1150,7 @@ const handleExportPDF = async () => {
                     </div>
                 )}
 
+                <div className="overflow-x-auto pb-2">
                 <div
                     ref={billRef}
                     className="bg-white p-4 border border-gray-800 rounded-lg shadow-sm mb-4"
@@ -1158,6 +1159,7 @@ const handleExportPDF = async () => {
                         fontFamily: 'DejaVu Sans, Arial, sans-serif',
                         color: '#222',
                         width: '100%',
+                        minWidth: '794px',
                         height: 'auto',
                         maxWidth: '794px',
                         margin: '0 auto',
@@ -1294,6 +1296,7 @@ const handleExportPDF = async () => {
                 </div>
                 <div style={{marginTop: '14px', borderTop: '1px solid #aaa', paddingTop: '8px', fontSize: '13px', textAlign: 'center'}}>
                     <span style={{fontWeight: 'bold', fontSize: '14px', marginRight: '6px'}}>नोट:</span>शेष बचा सामान रविवार को वापस नहीं लिया जाएगा। शेष बचा सामान लाने से पूर्व दुकान पर संपर्क करें। सामान के साथ हिसाब वाली पर्ची लाना अनिवार्य है।
+                </div>
                 </div>
                 </div>
 

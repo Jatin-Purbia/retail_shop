@@ -36,9 +36,9 @@ export default function LandingPage() {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-primary-light overflow-hidden">
-      <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md">
-        <h1 className="text-3xl font-bold text-primary mb-2 text-center">Retail Shop Portal</h1>
+    <div className="flex flex-col items-center justify-center min-h-screen bg-primary-light px-4">
+      <div className="bg-white rounded-2xl shadow-2xl p-6 sm:p-8 w-full max-w-md">
+        <h1 className="text-2xl sm:text-3xl font-bold text-primary mb-2 text-center">Retail Shop Portal</h1>
         <p className="text-accent text-center mb-6">Welcome! Please log in to continue.</p>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>

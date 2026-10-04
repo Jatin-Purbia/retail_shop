@@ -131,8 +131,8 @@ function SavedBills() {
     };
 
     return (
-        <div className="flex flex-col p-2 items-center min-h-screen bg-primary-light">
-            <div className="bg-white rounded-2xl shadow-2xl p-4 w-full max-w-7xl">
+        <div className="flex flex-col items-center">
+            <div className="bg-white rounded-2xl shadow-xl p-3 sm:p-6 w-full max-w-7xl">
                 <div className="mb-4">
                     <h1 className="text-2xl font-bold text-primary text-center">Saved Bills</h1>
                     <p className="text-base text-accent text-center">Manage previously saved bills</p>
@@ -165,7 +165,7 @@ function SavedBills() {
                 {pendingAction && (() => {
                     const { title, confirmLabel, confirmClass } = confirmationCopy(pendingAction.type, pendingAction.bill);
                     return (
-                        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+                        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40 p-4">
                             <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-sm text-center">
                                 <div className="text-lg font-semibold mb-4">{title}</div>
                                 <div className="flex justify-center gap-4 mt-2">
@@ -188,7 +188,7 @@ function SavedBills() {
                 })()}
 
                 {!isLoading && !error && filteredBills.length > 0 && (
-                    <div className="overflow-x-auto border border-gray-300 rounded-lg">
+                    <div className="hidden md:block overflow-x-auto border border-gray-300 rounded-lg">
                         <table className="w-full text-sm">
                             <thead className="bg-gray-100 sticky top-0">
                                 <tr>
@@ -248,6 +248,56 @@ function SavedBills() {
                                 ))}
                             </tbody>
                         </table>
+                    </div>
+                )}
+                {!isLoading && !error && filteredBills.length > 0 && (
+                    <div className="md:hidden space-y-3">
+                        {filteredBills.map((bill) => (
+                            <div key={bill.id} className="border border-gray-300 rounded-lg p-3 shadow-sm">
+                                <div className="flex justify-between items-start gap-2">
+                                    <div className="min-w-0">
+                                        <div className="font-bold text-primary">Bill #{bill.id}</div>
+                                        <div className="text-base truncate">
+                                            {bill.customer_name_hindi || bill.customer_name || '—'}
+                                        </div>
+                                    </div>
+                                    <div className="text-right font-semibold whitespace-nowrap">
+                                        {bill.total_amount !== null && bill.total_amount !== undefined
+                                            ? Number(bill.total_amount).toFixed(2)
+                                            : ''}
+                                    </div>
+                                </div>
+                                <div className="mt-2 text-sm text-gray-600 space-y-0.5">
+                                    <div>{[bill.customer_mobile, bill.alternate_mobile].filter(Boolean).join(' / ') || '—'}</div>
+                                    <div>
+                                        Delivery: {formatDateString(bill.delivery_date) || '—'} {bill.delivery_time_hindi || ''}
+                                    </div>
+                                    <div>Saved: {formatDateTime(bill.created_at)}</div>
+                                </div>
+                                <div className="mt-3 grid grid-cols-3 gap-2">
+                                    <button
+                                        onClick={() => setPendingAction({ type: 'edit', bill })}
+                                        className="py-2 text-sm bg-blue-500 hover:bg-blue-600 text-white rounded font-semibold"
+                                    >
+                                        Edit
+                                    </button>
+                                    <button
+                                        onClick={() => setPendingAction({ type: 'download', bill })}
+                                        disabled={downloadingId === bill.id}
+                                        className="py-2 text-sm bg-green-600 hover:bg-green-700 text-white rounded font-semibold disabled:opacity-50"
+                                    >
+                                        {downloadingId === bill.id ? '...' : 'Download'}
+                                    </button>
+                                    <button
+                                        onClick={() => setPendingAction({ type: 'delete', bill })}
+                                        disabled={deletingId === bill.id}
+                                        className="py-2 text-sm bg-red-500 hover:bg-red-600 text-white rounded font-semibold disabled:opacity-50"
+                                    >
+                                        {deletingId === bill.id ? '...' : 'Delete'}
+                                    </button>
+                                </div>
+                            </div>
+                        ))}
                     </div>
                 )}
             </div>

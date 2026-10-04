@@ -25,14 +25,14 @@ function LayoutWithNavbar({ session }) {
   if (!session) return <Navigate to="/" replace />;
 
   const linkBaseClasses =
-    'inline-flex items-center px-6 py-2 rounded-md text-lg font-medium transition-colors duration-200';
+    'inline-flex items-center whitespace-nowrap px-3 sm:px-6 py-2 rounded-md text-sm sm:text-lg font-medium transition-colors duration-200';
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      <nav className="bg-white shadow-md">
-        <div className="max-w-7xl mx-auto px-4">
-          <div className="flex justify-between h-16 items-center">
-            <div className="flex space-x-4">
+    <div className="min-h-screen bg-primary-light">
+      <nav className="bg-white shadow-md sticky top-0 z-40">
+        <div className="max-w-7xl mx-auto px-2 sm:px-4">
+          <div className="flex justify-between h-14 sm:h-16 items-center gap-2">
+            <div className="flex gap-1 sm:gap-4 overflow-x-auto">
               <Link
                 to="/admin"
                 className={`${linkBaseClasses} ${
@@ -66,14 +66,14 @@ function LayoutWithNavbar({ session }) {
             </div>
             <button
               onClick={() => supabase.auth.signOut()}
-              className="px-4 py-2 rounded-md text-gray-600 hover:text-red-600 hover:bg-red-50"
+              className="px-3 sm:px-4 py-2 rounded-md text-sm sm:text-base text-gray-600 hover:text-red-600 hover:bg-red-50 whitespace-nowrap"
             >
               Log out
             </button>
           </div>
         </div>
       </nav>
-      <main className="mx-auto py-4 px-4">
+      <main className="mx-auto py-2 sm:py-4 px-2 sm:px-4">
         <Outlet />
       </main>
     </div>
